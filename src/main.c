@@ -26,6 +26,16 @@ char *shift(int *argc, char ***argv) {
 		return flag;
 }
 	
+void free_state(Program_State *state) {
+	free(state->vars.data);
+	free(state->labels.data);
+	free(state->functions.data);
+	free(state->scope_stack.data);
+	free(state->block_stack.data);
+	free(state->ret_stack.data);
+	free(state->while_labels.data);
+}
+	
 int main(int argc, char **argv) {
 	char *file = shift(&argc, &argv);
 	char *flag = shift(&argc, &argv);
@@ -64,7 +74,7 @@ int main(int argc, char **argv) {
 	state.machine.program_size = state.machine.instructions.count;
 	if(compile) {
 		char *output_file = append_ext(filename, "tim");	
-		printf("compiling %s...\n", output_file);
+		printf("Compiling %s...\n", output_file);
 		write_program_to_file(&state.machine, output_file);		
 	} else {
 		run_instructions(&state.machine);
@@ -72,10 +82,6 @@ int main(int argc, char **argv) {
 	
 	arena_free(&node_arena);
 	arena_free(&string_arena);
-	free(state.vars.data);
-	free(state.functions.data);
-	free(state.scope_stack.data);
-	free(state.block_stack.data);
-	free(state.ret_stack.data);
-	free(state.while_labels.data);
+	free_state(&state);
+	machine_free(&state.machine);
 }

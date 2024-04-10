@@ -210,6 +210,7 @@ void print_stack(Machine *machine);
 void write_program_to_file(Machine *machine, char *file_path);
 Machine *read_program_from_file(Machine *machine, char *file_path);
 void machine_disasm(Machine *machine);
+void machine_free(Machine *machine);
 void run_instructions(Machine *machine);
 
 
@@ -321,9 +322,9 @@ bool has_operand[INST_COUNT] = {
      false,       //    "halt",
 };
 
-void free_cell(Memory *cell) {
-    free(cell->cell.data);    
-    free(cell);
+void free_cell(Memory **cell) {
+    free((*cell)->cell.data);    
+    free(*cell);
 }
 
 void free_memory(Machine *machine, void *ptr) {
@@ -331,14 +332,14 @@ void free_memory(Machine *machine, void *ptr) {
     if(cur == NULL) goto defer;
     if(cur->cell.data == ptr) {
         machine->memory = cur->next;
-        free_cell(cur);
+        free_cell(&cur);
         return;
     }
     while(cur->next != NULL) {
         if(cur->next->cell.data == ptr) {
             Memory *cell = cur->next;
             cur->next = cur->next->next;
-            free_cell(cell);
+            free_cell(&cell);
             return;
         }
         cur = cur->next;
@@ -743,6 +744,16 @@ void machine_disasm(Machine *machine) {
 	}
 }
 
+void machine_free(Machine *machine) {
+	Memory *cur = machine->memory;
+	while(cur != NULL) {
+		Memory *old = cur;
+		cur = cur->next;
+		free_cell(&old);
+	}
+	free(machine->instructions.data);
+	free(machine->str_stack.data);
+} 
 
 void run_instructions(Machine *machine) {
     void (*native_ptrs[100])(Machine*) = {native_open, native_write, native_read, 
