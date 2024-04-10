@@ -267,13 +267,13 @@ void strip_off_dot(char *str) {
     *str = '\0';
 }
 
-char *append_tasm_ext(char *filename) {
+char *append_ext(char *filename, char *ext) {
     size_t filename_s = strlen(filename);
     char *output = custom_realloc(NULL, sizeof(char)*filename_s);
     strncpy(output, filename, filename_s);
     strip_off_dot(output);
-    char *output_filename = custom_realloc(NULL, sizeof(char)*strlen(output)+sizeof(".tasm"));
-    sprintf(output_filename, "%s.tasm", output);
+    char *output_filename = custom_realloc(NULL, sizeof(char)*strlen(output)+strlen(ext)+1);
+    sprintf(output_filename, "%s.%s", output, ext);
 	free(output);
     return output_filename;
 }
@@ -769,7 +769,7 @@ void gen_label_arr(Program_State *state) {
 }
     
 void generate(Program_State *state, Program *program, char *filename) {
-    char *output = append_tasm_ext(filename);
+    char *output = append_ext(filename, "tasm");
     FILE *file = fopen(output, "w");
 	gen_vars(state, program, file);
     gen_program(state, program->nodes, file);

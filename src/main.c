@@ -8,6 +8,7 @@
 void usage(char *file) {
     fprintf(stderr, "usage: %s <option> <filename.cano>\n", file);
 	fprintf(stderr, "options: com, run\n");
+	fprintf(stderr, "show this menu: --help\n");
     exit(1);
 }
     
@@ -37,6 +38,8 @@ int main(int argc, char **argv) {
 	} else if(strncmp(flag, "run", 3) == 0) {
 		compile = false;
 		filename = shift(&argc, &argv);		
+	} else if(strncmp(flag, "--help", 6) == 0) {
+		usage(file);
 	} else {
 		compile = false;
 		filename = flag;
@@ -59,8 +62,12 @@ int main(int argc, char **argv) {
     generate(&state, &program, filename);
 	
 	state.machine.program_size = state.machine.instructions.count;
-	if(compile) write_program_to_file(&state.machine, "out.tim");		
-	else run_instructions(&state.machine);
+	if(compile) {
+		char *output_file = append_ext(file, "tim");	
+		write_program_to_file(&state.machine, output_file);		
+	} else {
+		run_instructions(&state.machine);
+	}
 	
 	arena_free(&node_arena);
 	arena_free(&string_arena);

@@ -67,6 +67,10 @@ char get_escape(char c){
 
 String_View read_file_to_view(Arena *arena, char *filename) {
     FILE *file = fopen(filename, "r");
+	if(file == NULL) {
+		fprintf(stderr, "cannot read from file: %s\n", filename);
+		exit(1);
+	}
     
     fseek(file, 0, SEEK_END);
     size_t len = ftell(file);

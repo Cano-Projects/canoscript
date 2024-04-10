@@ -39,7 +39,7 @@ void gen_func_label(Program_State *state, FILE *file, String_View label);
 void gen_func_call(Program_State *state, FILE *file, String_View label);
 void gen_while_label(Program_State *state, FILE *file, size_t label);
 void strip_off_dot(char *str);
-char *append_tasm_ext(char *filename);
+char *append_ext(char *filename, char *ext);
 Function *get_func(Functions functions, String_View name);
 size_t get_func_loc(Functions functions, String_View name);
 int get_variable_location(Program_State *state, String_View name);
