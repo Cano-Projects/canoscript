@@ -1,4 +1,4 @@
-x: str = "Same"
+x: str = "Sames"
 y: str = "Same"
 
 printint(n: int): int 
@@ -23,9 +23,14 @@ strcmp(a: str, b: str): int
     return 0
 end
 
-a: int = strcmp(x, y)
+main(): void
+	a: int = strcmp(x, y)
+	
+	printint(a)
+	write "\n"
+	
+	exit 0
+end
 
-printint(a)
-write "\n"
-
-exit 0
+main()
+	

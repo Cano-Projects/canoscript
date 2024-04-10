@@ -165,7 +165,7 @@ void gen_func_label(Program_State *state, FILE *file, String_View label) {
 }
     
 void gen_func_call(Program_State *state, FILE *file, String_View label) {
-	size_t loc = get_func_loc(state->functions, label);
+	size_t loc = get_func_loc(state->program.functions, label);
 	Inst inst = create_inst(INST_CALL, (Word){.as_int=loc}, INT_TYPE);
 	DA_APPEND(&state->machine.instructions, inst);
     fprintf(file, "call "View_Print"\n", View_Arg(label));
@@ -297,7 +297,7 @@ size_t get_func_loc(Functions functions, String_View name) {
             return i;
         }
     }
-	ASSERT(false, "unexpected function name");
+	ASSERT(false, "unexpected function name: "View_Print"\n", View_Arg(name));
 }
 	
 bool is_func_arg(Program_State *state, String_View name) {
