@@ -63,7 +63,8 @@ int main(int argc, char **argv) {
 	
 	state.machine.program_size = state.machine.instructions.count;
 	if(compile) {
-		char *output_file = append_ext(file, "tim");	
+		char *output_file = append_ext(filename, "tim");	
+		printf("compiling %s...\n", output_file);
 		write_program_to_file(&state.machine, output_file);		
 	} else {
 		run_instructions(&state.machine);
