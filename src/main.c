@@ -6,7 +6,8 @@
 #include "tim.h"
 
 void usage(char *file) {
-    fprintf(stderr, "usage: %s <filename.cano>\n", file);
+    fprintf(stderr, "usage: %s <option> <filename.cano>\n", file);
+	fprintf(stderr, "options: com, run\n");
     exit(1);
 }
     
@@ -17,11 +18,31 @@ void *custom_realloc(void *ptr, size_t size) {
     return new_ptr;
 }
 	
-int main(int argc, char *argv[]) {
-    if(argc != 2) {
-        usage(argv[0]);
-    }
-    char *filename = argv[1];
+char *shift(int *argc, char ***argv) {
+		char *flag = *(*argv);
+		*argc += 1;	
+		*argv += 1;
+		return flag;
+}
+	
+int main(int argc, char **argv) {
+	char *file = shift(&argc, &argv);
+	char *flag = shift(&argc, &argv);
+	char *filename = NULL;
+	if(flag == NULL) usage(file);
+	bool compile = false;
+	if(strncmp(flag, "com", 3) == 0) {
+		compile = true;
+		filename = shift(&argc, &argv);
+	} else if(strncmp(flag, "run", 3) == 0) {
+		compile = false;
+		filename = shift(&argc, &argv);		
+	} else {
+		compile = false;
+		filename = flag;
+	}
+	if(filename == NULL) usage(file);
+	
 	Arena token_arena = arena_init(sizeof(Token)*ARENA_INIT_SIZE);	
     String_View view = read_file_to_view(&token_arena, filename);
 	Arena string_arena = arena_init(sizeof(char)*ARENA_INIT_SIZE);
@@ -38,7 +59,8 @@ int main(int argc, char *argv[]) {
     generate(&state, &program, filename);
 	
 	state.machine.program_size = state.machine.instructions.count;
-	write_program_to_file(&state.machine, "out.tim");	
+	if(compile) write_program_to_file(&state.machine, "out.tim");		
+	else run_instructions(&state.machine);
 	
 	arena_free(&node_arena);
 	arena_free(&string_arena);
