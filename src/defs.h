@@ -180,6 +180,7 @@ typedef struct Expr {
     Expr_Value value;
     Expr_Type type;   
     Type_Type return_type;
+	Type_Type data_type;
     Location loc;
 } Expr;
     
