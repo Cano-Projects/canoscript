@@ -1,0 +1,41 @@
+gcc -Wall -Wextra -pedantic -ggdb2 -Werror   -c src/backend.c -o build/backend.o
+gcc -Wall -Wextra -pedantic -ggdb2 -Werror   -c src/frontend.c -o build/frontend.o
+src/frontend.c: In function ‘parse_expr’:
+src/frontend.c:689:16: error: unused variable ‘arena’ [-Werror=unused-variable]
+  689 |         Arena *arena = parser->arena;
+      |                ^~~~~
+src/frontend.c: In function ‘parse_native_node’:
+src/frontend.c:717:17: error: ‘native_value’ undeclared (first use in this function); did you mean ‘Native_Call’?
+  717 |     call.type = native_value;
+      |                 ^~~~~~~~~~~~
+      |                 Native_Call
+src/frontend.c:717:17: note: each undeclared identifier is reported only once for each function it appears in
+src/frontend.c: In function ‘parse_var_dec’:
+src/frontend.c:743:33: error: ‘structs’ undeclared (first use in this function); did you mean ‘Struct’?
+  743 |     } else if(is_struct(tokens, structs)) {
+      |                                 ^~~~~~~
+      |                                 Struct
+src/frontend.c: In function ‘parse_reassign_left’:
+src/frontend.c:783:50: error: ‘tokens’ undeclared (first use in this function); did you mean ‘token’?
+  783 |                         Token token = token_peek(tokens, 1);
+      |                                                  ^~~~~~
+      |                                                  token
+src/frontend.c:785:21: error: ‘node’ undeclared (first use in this function); did you mean ‘Node’?
+  785 |                     node->type = TYPE_VAR_REASSIGN;
+      |                     ^~~~
+      |                     Node
+In file included from src/frontend.h:5,
+                 from src/frontend.c:1:
+src/frontend.c:826:60: error: ‘arena’ undeclared (first use in this function); did you mean ‘Arena’?
+  826 |                                                 ADA_APPEND(arena, &node->value.func_call.args, arg);
+      |                                                            ^~~~~
+src/defs.h:34:37: note: in definition of macro ‘ADA_APPEND’
+   34 |         (da)->data = arena_realloc((arena), (da)->data, (da)->count*sizeof(*(da)->data), (da)->capacity*sizeof(*(da)->data));       \
+      |                                     ^~~~~
+src/frontend.c: In function ‘parse’:
+src/frontend.c:847:42: error: ‘parser’ undeclared (first use in this function); did you mean ‘Parser’?
+  847 |                 node = parse_native_node(parser);
+      |                                          ^~~~~~
+      |                                          Parser
+cc1: all warnings being treated as errors
+make: *** [Makefile:28: build/frontend.o] Error 1

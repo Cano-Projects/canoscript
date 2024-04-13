@@ -365,6 +365,104 @@ typedef struct {
 	Nodes vars;
 } Program;
 
+typedef enum {
+    TT_NONE = 0,
+    TT_WRITE,
+    TT_EXIT,
+    TT_BUILTIN,
+    TT_IDENT,
+    TT_COLON,
+    TT_O_PAREN,
+    TT_C_PAREN,
+    TT_O_BRACKET,
+    TT_C_BRACKET,
+    TT_O_CURLY,
+    TT_C_CURLY,
+    TT_COMMA,
+    TT_DOT,
+    TT_EQ,
+    TT_DOUBLE_EQ,
+    TT_NOT_EQ,
+    TT_GREATER_EQ,
+    TT_LESS_EQ,
+    TT_GREATER,
+    TT_LESS,
+    TT_PLUS,
+    TT_MINUS,
+    TT_MULT,
+    TT_DIV,
+    TT_MOD,
+    TT_STRING,
+    TT_CHAR_LIT,
+    // TODO TT_INT_LIT
+    TT_INT,
+    TT_FLOAT_LIT,
+    TT_STRUCT,
+    TT_VOID,
+    TT_TYPE,
+    TT_IF,
+    TT_ELSE,
+    TT_WHILE,
+    TT_THEN,
+    TT_RET,
+    TT_END,
+    TT_COUNT,
+} Token_Type;
+
+typedef union {
+    String_View string;
+    String_View ident;
+    int integer;
+    double floating;
+    Type_Type type;
+    Builtin_Type builtin;
+} Token_Value;
+
+typedef struct {
+    Token_Value value; 
+    Token_Type type;
+    Location loc;
+} Token;
+    
+typedef struct {
+    Token *data;
+    size_t count;
+    size_t capacity;
+} Token_Arr;
+
+typedef union {
+	Function *function;
+	Variable *var;
+	Struct *structure;
+} Symbol_Value;
+	
+typedef enum {
+	SYMBOL_FUNC,
+	SYMBOL_VAR,
+	SYMBOL_STRUCT,
+} Symbol_Type;
+	
+typedef struct {
+	Symbol_Value val;
+	Symbol_Type type;
+} Symbol;
+
+typedef struct {
+	Symbol *data;
+	size_t count;
+	size_t capacity;
+} Symbols;
+	
+typedef struct {
+	Arena *arena;
+	Token_Arr *tokens;
+	Blocks *blocks;
+	Nodes *variables;
+	Functions *functions;
+	Nodes *structs;
+	Symbols symbols;
+} Parser;
+
 void *custom_realloc(void *ptr, size_t size);
     
 #endif // DEFS_H
