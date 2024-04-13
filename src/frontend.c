@@ -512,13 +512,13 @@ Builtin parse_builtin_node(Builtin_Type type, Parser *parser) {
     return builtin;
 }
 
-Variable get_var(Location loc, Blocks *blocks, Functions *functions, Nodes *variables, String_View name) {
-	for(size_t i = 0; i < variables->count; i++) {
-		if(view_cmp(variables->data[i].value.var.name, name)) return variables->data[i].value.var;
-	}
-	if(is_in_function(blocks)) {
-		ASSERT(functions->count > 0, "Functions are out of wack");
-		Function func = functions->data[functions->count-1];
+Variable get_var(Location loc, Parser *parser, String_View name) {
+    for(size_t i = 0; i < parser->symbols.count; i++) {
+        if(parser->symbols.data[i].type == SYMBOL_VAR && view_cmp(parser->symbols.data[i].val.var.name, name)) return parser->symbols.data[i].val.var;
+    }
+	if(is_in_function(parser->blocks)) {
+		ASSERT(parser->functions->count > 0, "Functions are out of wack");
+		Function func = parser->functions->data[parser->functions->count-1];
 		for(size_t i = 0; i < func.args.count; i++) {
 			if(view_cmp(func.args.data[i].value.var.name, name)) return func.args.data[i].value.var;
 		}
@@ -536,9 +536,7 @@ Function *get_function(Location loc, Functions *functions, String_View name) {
 Expr *parse_primary(Parser *parser) {
 	Arena *arena = parser->arena;
 	Token_Arr *tokens = parser->tokens;
-	Blocks *blocks = parser->blocks;
 	Functions *functions = parser->functions;
-	Nodes *variables = parser->variables;
 	Nodes *structs = parser->structs;
 	Token token = token_consume(tokens);
     if(token.type != TT_INT && token.type != TT_BUILTIN && token.type != TT_FLOAT_LIT && token.type != TT_O_PAREN && token.type != TT_STRING && token.type != TT_CHAR_LIT && token.type != TT_IDENT) {
@@ -614,7 +612,7 @@ Expr *parse_primary(Parser *parser) {
                     .type = EXPR_ARR,
                     .value.array.name = token.value.ident,
                 };
-				Variable arr = get_var(expr->loc, blocks, functions, variables, expr->value.array.name);
+				Variable arr = get_var(expr->loc, parser, expr->value.array.name);
 				expr->data_type = arr.type;
                 token_consume(tokens); // open bracket
                 expr->value.array.index = parse_expr(parser);
@@ -644,7 +642,7 @@ Expr *parse_primary(Parser *parser) {
                     .type = EXPR_VAR,
                     .value.variable = token.value.ident,
                 };
-				Variable var = get_var(expr->loc, blocks, functions, variables, expr->value.variable);
+				Variable var = get_var(expr->loc, parser, expr->value.variable);
 				expr->data_type = var.type;
             }
             break;
@@ -903,10 +901,11 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 						ASSERT(functions.count > 0, "Block stack got messed up frfr");
 						node.value.var.function = functions.data[functions.count-1].name;							
 						ADA_APPEND(arena, &root, node);
-						//ADA_APPEND(arena, &vars, node);										
 					} else {
 						ADA_APPEND(arena, &vars, node);							
 					}
+                    Symbol symbol = {.val.var=node.value.var, .type=SYMBOL_VAR};
+                    ADA_APPEND(arena, &parser.symbols, symbol);
 					break;
                 } else {
 					int i = parse_reassign_left(&parser, &node);
@@ -948,6 +947,8 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 	                    token_consume(&tokens);                                                                        
 	                    node.value.func_dec.label = cur_label;
 						ADA_APPEND(arena, &functions, function);
+                        Symbol symbol = {.type=SYMBOL_FUNC, .val.function=function};
+						ADA_APPEND(arena, &parser.symbols, symbol);
 	                    ADA_APPEND(arena, &labels, cur_label++);
 	                } else if(node.type == TYPE_FUNC_CALL) {
 	                    // function call
@@ -974,6 +975,8 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                 }
                 token_consume(&tokens);
                 ADA_APPEND(arena, &structs, node);
+                Symbol symbol = {.type=SYMBOL_STRUCT, .val.structure=node.value.structs};
+                ADA_APPEND(arena, &parser.symbols, symbol);
             } break;
             case TT_RET: {
                 node.type = TYPE_RET;

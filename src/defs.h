@@ -431,9 +431,9 @@ typedef struct {
 } Token_Arr;
 
 typedef union {
-	Function *function;
-	Variable *var;
-	Struct *structure;
+	Function function;
+	Variable var;
+	Struct structure;
 } Symbol_Value;
 	
 typedef enum {
