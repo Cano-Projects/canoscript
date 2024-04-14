@@ -831,14 +831,15 @@ int parse_reassign_left(Parser *parser, Node *node) {
             } else {
 				size_t arg_index = 0;
                 while(tokens->count > 0 && token_consume(tokens).type != TT_C_PAREN && i > 2) {
+					Variable cur_arg = function->args.data[arg_index].value.var;
                     Expr *arg = parse_expr(parser);
                     ADA_APPEND(arena, &node->value.func_call.args, arg);
-					if(arg->data_type != function->args.data[arg_index].value.var.type) {
+					if(arg->data_type != cur_arg.type) {
 						PRINT_ERROR(
 									arg->loc, 
 									"argument "View_Print" expected data type %s but found %s", 
-									View_Arg(function->args.data[arg_index].value.var.name),
-									data_types[function->args.data[arg_index].value.var.type].data,
+									View_Arg(cur_arg.name),
+									data_types[cur_arg.type].data,
 									data_types[arg->data_type].data
 							       );
 					}								
