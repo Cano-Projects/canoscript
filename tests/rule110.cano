@@ -43,9 +43,9 @@ gen_next(): void
 		cur_in: int = (i + 0 + data_s) % data_s
 		next_in: int = (i + 1 + data_s) % data_s
 		cur: str = alloc 4
-		cur[0] = data[prev_in] + '0'
-		cur[1] = data[cur_in] + '0'
-		cur[2] = data[next_in] + '0'
+		cur[0] = data[prev_in] + 48
+		cur[1] = data[cur_in] + 48
+		cur[2] = data[next_in] + 48
 	
 		if(strcmp("111", cur)) then
 			new[new_s] = 0
