@@ -4,7 +4,7 @@ char *token_types[TT_COUNT] = {"none", "write", "exit", "builtin", "ident",
                                ":", "(", ")", "[", "]", "{", "}", ",", ".", "=", "==", "!=", ">=", "<=", ">", "<", "+", "-", "*", "/", "%",
                                "string", "char", "integer", "float", "struct", "void", "type", "if", "else", "while", "then", 
                                "return", "end"};
-    
+
 String_View data_types[DATA_COUNT] = {
     {.data="int", .len=3},
     {.data="str", .len=3},    
@@ -563,7 +563,7 @@ Expr *parse_primary(Parser *parser) {
         case TT_STRING:
             *expr = (Expr){
                 .type = EXPR_STR,
-				.data_type = TYPE_STR,
+				.data_type = TYPE_CHAR,
                 .value.string = token.value.string,
             };
             break;
@@ -586,7 +586,9 @@ Expr *parse_primary(Parser *parser) {
         } break;
         case TT_O_PAREN:
             expr = parse_expr(parser);
-            if(token_consume(tokens).type != TT_C_PAREN) {
+			token = token_consume(tokens);
+			expr->loc = token.loc;
+            if(token.type != TT_C_PAREN) {
                 PRINT_ERROR(token.loc, "expected `)`");   
             }
             break;
@@ -600,7 +602,8 @@ Expr *parse_primary(Parser *parser) {
 				expr->data_type = function->type;
                 if(token_peek(tokens, 1).type == TT_C_PAREN) {
                     token_consume(tokens);
-                    token_consume(tokens);                
+                    token_consume(tokens);
+					expr->loc = token.loc;
                     return expr;
                 }
                 while(tokens->count > 0 && token_consume(tokens).type != TT_C_PAREN) {
@@ -649,6 +652,7 @@ Expr *parse_primary(Parser *parser) {
         default:
             ASSERT(false, "unexpected token");
     }
+	expr->loc = token.loc;
     return expr;
 }
 
@@ -663,6 +667,9 @@ Expr *parse_expr_1(Parser *parser, Expr *lhs, Precedence min_precedence) {
         if(tokens->count > 0) {
             token_consume(tokens);
             Expr *rhs = parse_primary(parser);
+			if(rhs->data_type != lhs->data_type && rhs->data_type != TYPE_STR && lhs->data_type != TYPE_STR) {
+				PRINT_ERROR(rhs->loc, "expression with types of both %s and %s", data_types[lhs->data_type].data, data_types[rhs->data_type].data);
+			}
             lookahead = token_peek(tokens, 0);
             while(op_get_prec(lookahead.type) > op.precedence) {
                 rhs = parse_expr_1(parser, rhs, op.precedence+1);
@@ -745,6 +752,7 @@ Node parse_var_dec(Parser *parser) {
         PRINT_ERROR(token_peek(tokens, 0).loc, "expected `type` but found `%s`\n", token_types[token_peek(tokens, 0).type]);
     }
     node.value.var.is_array = token_peek(tokens, 1).type == TT_O_BRACKET || node.value.var.type == TYPE_STR;
+	//if(node.value.var.type == TYPE_STR) node.value.var.type = TYPE_CHAR;
     if(token_peek(tokens, 1).type == TT_O_BRACKET) {
         token_consume(tokens);
         token_consume(tokens);
@@ -895,7 +903,9 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                         if(token_peek(&tokens, 0).type == TT_C_CURLY) token_consume(&tokens);
                     } else {
                         ADA_APPEND(arena, &node.value.var.value, parse_expr(&parser));    
-                        expr_type_check(node.loc, node.value.var.value.data[node.value.var.value.count-1]);
+						if(node.value.var.value.data[0]->data_type != node.value.var.type && node.value.var.type != TYPE_STR) {
+							PRINT_ERROR(node.loc, "expression does match the type of the var "View_Print, View_Arg(node.value.var.name));
+						}
                     }
 					if(is_in_function(block_stack)) {
 						ASSERT(functions.count > 0, "Block stack got messed up frfr");
