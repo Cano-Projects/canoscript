@@ -752,7 +752,6 @@ Node parse_var_dec(Parser *parser) {
         PRINT_ERROR(token_peek(tokens, 0).loc, "expected `type` but found `%s`\n", token_types[token_peek(tokens, 0).type]);
     }
     node.value.var.is_array = token_peek(tokens, 1).type == TT_O_BRACKET || node.value.var.type == TYPE_STR;
-	//if(node.value.var.type == TYPE_STR) node.value.var.type = TYPE_CHAR;
     if(token_peek(tokens, 1).type == TT_O_BRACKET) {
         token_consume(tokens);
         token_consume(tokens);
@@ -824,15 +823,26 @@ int parse_reassign_left(Parser *parser, Node *node) {
             node->type = TYPE_FUNC_CALL;
             node->value.func_call.name = tokens->data[0].value.ident;                                        
             token_consume(tokens);                                                
+			Function *function = get_function(node->loc, parser->functions, node->value.func_call.name);						
             if(token_peek(tokens, 1).type == TT_C_PAREN) {
                 // consume the open and close paren of empty funcall
                 token_consume(tokens);
                 token_consume(tokens);                    
             } else {
+				size_t arg_index = 0;
                 while(tokens->count > 0 && token_consume(tokens).type != TT_C_PAREN && i > 2) {
                     Expr *arg = parse_expr(parser);
                     ADA_APPEND(arena, &node->value.func_call.args, arg);
-                  expr_type_check(node->loc, node->value.func_call.args.data[node->value.func_call.args.count - 1]);
+					if(arg->data_type != function->args.data[arg_index].value.var.type) {
+						PRINT_ERROR(
+									arg->loc, 
+									"argument "View_Print" expected data type %s but found %s", 
+									View_Arg(function->args.data[arg_index].value.var.name),
+									data_types[function->args.data[arg_index].value.var.type].data,
+									data_types[arg->data_type].data
+							       );
+					}								
+                    expr_type_check(node->loc, node->value.func_call.args.data[node->value.func_call.args.count - 1]);
                 }
             }
         }
