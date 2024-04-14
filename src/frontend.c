@@ -696,18 +696,6 @@ Expr *parse_expr(Parser *parser) {
 
 char *expr_types[EXPR_COUNT] = {"bin", "int", "str", "char", "var", "func", "arr"};
 
-Expr_Type expr_type_check(Location loc, Expr *expr) {
-    return expr->type;
-    if(expr->type != EXPR_BIN) return expr->type;
-    Expr_Type typel = expr_type_check(loc, expr->value.bin.lhs);
-    Expr_Type typer = expr_type_check(loc, expr->value.bin.rhs);
-    if(typel != typer && typel != EXPR_VAR && typer != EXPR_VAR && 
-       typel != EXPR_ARR && typer != EXPR_ARR && typel != EXPR_FUNCALL && typer != EXPR_FUNCALL) {
-        PRINT_ERROR(loc, "expected type `%s` but found type `%s`", expr_types[typel], expr_types[typer]);
-    }
-    return typel;
-}
-
 Node parse_native_node(Parser *parser, int native_value) {
     Token_Arr *tokens = parser->tokens;
     Arena *arena = parser->arena;
@@ -716,7 +704,6 @@ Node parse_native_node(Parser *parser, int native_value) {
     Native_Call call = {0};
     Arg arg = {0};
     arg = (Arg){.type=ARG_EXPR, .value.expr=parse_expr(parser)};
-    expr_type_check(node.loc, arg.value.expr);
     ADA_APPEND(arena, &call.args, arg);
     call.type = native_value;
     node.value.native = call;
@@ -756,7 +743,6 @@ Node parse_var_dec(Parser *parser) {
         token_consume(tokens);
         token_consume(tokens);
         node.value.var.array_s = parse_expr(parser);       
-        expr_type_check(node.loc, node.value.var.array_s);
     }
     return node;
 }
@@ -804,7 +790,6 @@ int parse_reassign_left(Parser *parser, Node *node) {
         token_consume(tokens); // ident
         token_consume(tokens); // open bracket                        
         node->value.array.index = parse_expr(parser);
-        expr_type_check(node->loc, node->value.array.index);
         expect_token(tokens, TT_C_BRACKET);
     } else if(token.type == TT_O_PAREN) {
         size_t i = 1;
@@ -843,7 +828,6 @@ int parse_reassign_left(Parser *parser, Node *node) {
 									data_types[arg->data_type].data
 							       );
 					}								
-                    expr_type_check(node->loc, node->value.func_call.args.data[node->value.func_call.args.count - 1]);
                 }
             }
         }
@@ -891,7 +875,6 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                         }
                         while(tokens.count > 0) {
                             ADA_APPEND(arena, &node.value.var.value, parse_expr(&parser));
-                            expr_type_check(node.loc, node.value.var.value.data[node.value.var.value.count-1]);
                             Token next = token_consume(&tokens);
                             if(next.type == TT_COMMA) continue;
                             else if(next.type == TT_C_BRACKET) break;
@@ -932,17 +915,14 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 					int i = parse_reassign_left(&parser, &node);
 					if(node.type == TYPE_VAR_REASSIGN) {
 	                    ADA_APPEND(arena, &node.value.var.value, parse_expr(&parser));
-	                    expr_type_check(node.loc, node.value.var.value.data[node.value.var.value.count-1]);
 	                } else if(node.type == TYPE_FIELD_REASSIGN) {
 	                    expect_token(&tokens, TT_EQ);
 	                    ADA_APPEND(arena, &node.value.field.value, parse_expr(&parser));
-	                    expr_type_check(node.loc, node.value.field.value.data[node.value.field.value.count-1]);
 	                } else if(node.type == TYPE_ARR_INDEX) {
 						Token token = token_peek(&tokens, 0);
 						if(token.type == TT_EQ) {
 							token_consume(&tokens);
 		                    ADA_APPEND(arena, &node.value.array.value, parse_expr(&parser));
-		                    expr_type_check(node.loc, node.value.array.value.data[node.value.array.value.count - 1]);
 						} else if(token.type == TT_DOT) {
 							ASSERT(false, "unimplemented");				
 						} else {
@@ -1003,7 +983,6 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                 node.type = TYPE_RET;
                 token_consume(&tokens);
                 node.value.expr = parse_expr(&parser);
-                expr_type_check(node.loc, node.value.expr);
                 ADA_APPEND(arena, &root, node);                
             } break;
             case TT_IF: {
@@ -1011,7 +990,6 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                 ADA_APPEND(arena, block_stack, (Block){.type=BLOCK_IF});                
                 token_consume(&tokens);
                 node.value.conditional = parse_expr(&parser);
-                expr_type_check(node.loc, node.value.conditional);
                 ADA_APPEND(arena, &root, node);
             } break;
             case TT_ELSE: {
@@ -1030,7 +1008,6 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                 token_consume(&tokens);
                 ADA_APPEND(arena, block_stack, (Block){.type=BLOCK_WHILE});                                
                 node.value.conditional = parse_expr(&parser);
-                expr_type_check(node.loc, node.value.conditional);
                 ADA_APPEND(arena, &root, node);
             } break;
             case TT_THEN: {
