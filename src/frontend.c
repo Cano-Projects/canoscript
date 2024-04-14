@@ -526,6 +526,7 @@ Variable get_var(Location loc, Parser *parser, String_View name) {
 	PRINT_ERROR(loc, "Unknown variable: "View_Print"\n", View_Arg(name));
 }
 
+// TODO: update to use proper symbol table
 Function *get_function(Location loc, Functions *functions, String_View name) {
 	for(size_t i = 0; i < functions->count; i++) {
 		if(view_cmp(functions->data[i].name, name)) return &functions->data[i];	
@@ -549,7 +550,6 @@ Expr *parse_primary(Parser *parser) {
                 .type = EXPR_INT,
 				.data_type = TYPE_INT,
                 .value.integer = token.value.integer,
-                .loc = token.loc,
             };
             break;
         case TT_FLOAT_LIT:
@@ -557,7 +557,6 @@ Expr *parse_primary(Parser *parser) {
                 .type = EXPR_FLOAT,
 				.data_type = TYPE_FLOAT,
                 .value.floating = token.value.floating,
-                .loc = token.loc,
             };
             break;
         case TT_STRING:
@@ -580,14 +579,12 @@ Expr *parse_primary(Parser *parser) {
                 .type = EXPR_BUILTIN,
                 .value.builtin = value,
 				.data_type = value.return_type,
-                .loc = token.loc,
             };
             if(expr->value.builtin.return_type == TYPE_VOID) expr->return_type = TYPE_VOID;
         } break;
         case TT_O_PAREN:
             expr = parse_expr(parser);
 			token = token_consume(tokens);
-			expr->loc = token.loc;
             if(token.type != TT_C_PAREN) {
                 PRINT_ERROR(token.loc, "expected `)`");   
             }
@@ -603,7 +600,6 @@ Expr *parse_primary(Parser *parser) {
                 if(token_peek(tokens, 1).type == TT_C_PAREN) {
                     token_consume(tokens);
                     token_consume(tokens);
-					expr->loc = token.loc;
                     return expr;
                 }
                 while(tokens->count > 0 && token_consume(tokens).type != TT_C_PAREN) {
@@ -683,6 +679,7 @@ Expr *parse_expr_1(Parser *parser, Expr *lhs, Precedence min_precedence) {
                 .value.bin.lhs = lhs,
                 .value.bin.rhs = rhs,
                 .value.bin.op = op,
+				.loc = lhs->loc,
             };
             lhs = new_lhs;
         }
@@ -710,6 +707,7 @@ Node parse_native_node(Parser *parser, int native_value) {
     return node;
 }
 
+// TODO: update to use proper symbol table
 bool is_struct(Token_Arr *tokens, Nodes *structs) {
     Token token = token_peek(tokens, 0);
     if(token.type != TT_IDENT) PRINT_ERROR(token.loc, "expected identifier but found `%s`\n", token_types[token.type]);
