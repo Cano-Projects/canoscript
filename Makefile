@@ -15,20 +15,18 @@ SRC=$(wildcard $(SRCDIR)/*.c)
 OBJ=$(patsubst $(SRCDIR)/%.c, $(BUILDDIR)/%.o, $(SRC))
 
 BINARYNAME=main
-BINARY=$(BUILDDIR)/$(BINARYNAME)
+BINARY=$(BINARYNAME)
 
-.PHONY: all setup clean destroy
+.PHONY: all clean destroy
 
 all: $(BINARY)
 
-$(BINARY): $(BUILDDIR)/$(OBJ)
+$(BINARY): $(OBJ)
 	$(CC) $(CFLAGS) $(INCLUDES) $(OBJ) -o $(BINARY) $(LIBS)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
+	@ mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -c $< -o $@
-
-setup:
-	mkdir -p $(BUILDDIR)
 
 clean:
 	rm -rf $(BINARY)
