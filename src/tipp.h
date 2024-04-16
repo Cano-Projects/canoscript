@@ -146,6 +146,23 @@ typedef struct {
 	size_t count;
 	size_t capacity;
 } Tipp_Str;
+	
+void append_file_info(Tipp_Str *output, String_View filename, size_t line) {
+	DA_APPEND(output, '@');
+	DA_APPEND(output, '"');				
+	for(size_t i = 0; i < filename.len; i++) {
+		DA_APPEND(output, filename.data[i]);
+	}
+	DA_APPEND(output, '"');				
+	DA_APPEND(output, ' ');
+	char *line_nums = malloc(sizeof(char)*64);
+	sprintf(line_nums, "%zu", line);
+	for(size_t i = 0; i < strlen(line_nums); i++) {
+			DA_APPEND(output, line_nums[i]);
+	}
+	DA_APPEND(output, '\n');
+	free(line_nums);
+}
 
 String_View pass(String_View view, int depth, char *file_name){
 	(void)file_name;
@@ -192,10 +209,12 @@ String_View pass(String_View view, int depth, char *file_name){
 				char *imported_name = view_to_cstr(imported_file);
 				strncpy(imported_name, imported_file.data, imported_file.len);
                 String_View imported_buffer = prepro(imported_name, depth + 1);
-				free(imported_name);
+				append_file_info(&output, imported_file, 1);
 				for(size_t i = 0; i < imported_buffer.len; i++) {
 					DA_APPEND(&output, imported_buffer.data[i]);
 				}
+				free(imported_name);									
+				append_file_info(&output, view_create(file_name, strlen(file_name)), line);				
                 //char *file_info = malloc(sizeof(char) * 64);
                 //sprintf(file_info, "\n@\"%s\" %d\n", imported_file, 1);
                 //append_to_output(output, &output_index, file_info, strlen(file_info));
