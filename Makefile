@@ -22,7 +22,7 @@ BINARY=$(BINARYNAME)
 all: $(BINARY)
 
 $(BINARY): $(OBJ)
-	$(CC) $(CFLAGS) $(INCLUDES) $(OBJ) -o $(BINARY) $(LIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) $(OBJ) -o $(BUILDDIR)/$(BINARY) $(LIBS)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 	@ mkdir -p $(dir $@)
