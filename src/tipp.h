@@ -215,9 +215,6 @@ String_View pass(String_View view, int depth, char *file_name){
 				}
 				free(imported_name);									
 				append_file_info(&output, view_create(file_name, strlen(file_name)), line);				
-                //char *file_info = malloc(sizeof(char) * 64);
-                //sprintf(file_info, "\n@\"%s\" %d\n", imported_file, 1);
-                //append_to_output(output, &output_index, file_info, strlen(file_info));
                 line++;
 				view = view_chop_left(view);
 				continue;

@@ -254,16 +254,40 @@ Dynamic_Str generate_string(Arena *arena, String_View *view, Token token, char d
 	return word;
 }
 
-Token_Arr lex(Arena *arena, Arena *string_arena, char *filename, String_View view) {
-	view = prepro(filename, 0);
+Token_Arr lex(Arena *arena, Arena *string_arena, char *entry_filename, String_View view) {
+	view = prepro(entry_filename, 0);
     size_t row = 1;
     Token_Arr tokens = {0};
     const char *start = view.data;
-    while(view.len > 0) {
+	char *filename = entry_filename;
+	while(view.len > 0) {
         Token token = {0};
         token.loc = (Location){.filename = filename, .row=row, .col=view.data-start};
         switch(*view.data) {
 			case '@':
+				view = view_chop_left(view);
+				if(*view.data != '"') PRINT_ERROR(token.loc, "invalid preprocessor directive");
+				view = view_chop_left(view);
+				Dynamic_Str prepro_filename = {0};
+				while(view.len > 0 && *view.data != '"') {
+					ADA_APPEND(arena, &prepro_filename, *view.data);
+					view = view_chop_left(view);
+				}
+				ADA_APPEND(arena, &prepro_filename, '\0');
+				if(view.len == 0) PRINT_ERROR(token.loc, "invalid preprocessor directive");
+				// consume `"` and space
+				view = view_chop_left(view);
+				view = view_chop_left(view);			
+				Dynamic_Str line_num = {0};
+				while(view.len > 0 && *view.data != '\n') {
+					if(!isdigit(*view.data)) PRINT_ERROR(token.loc, "invalid preprocessor directive");
+					ADA_APPEND(arena, &line_num, *view.data);
+					view = view_chop_left(view);
+				}
+				size_t line_number = view_to_int(view_create(line_num.data, line_num.count));
+				
+				filename = prepro_filename.data;
+				row = line_number;
 				while(view.len > 0 && *view.data != '\n') view = view_chop_left(view);
 				break;
             case ':':

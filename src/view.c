@@ -150,3 +150,11 @@ String_View view_chop_left(String_View view) {
     }
     return view;
 }
+
+int view_to_int(String_View view) {
+    int result = 0;
+    for(size_t i = 0; i < view.len; i++) {
+	        result = result * 10 + view.data[i] - '0';
+	    }
+    return result;
+}
