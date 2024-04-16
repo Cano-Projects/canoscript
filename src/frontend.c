@@ -256,7 +256,6 @@ Dynamic_Str generate_string(Arena *arena, String_View *view, Token token, char d
 
 Token_Arr lex(Arena *arena, Arena *string_arena, char *filename, String_View view) {
 	view = prepro(filename, 0);
-	//printf(View_Print, View_Arg(view));
     size_t row = 1;
     Token_Arr tokens = {0};
     const char *start = view.data;

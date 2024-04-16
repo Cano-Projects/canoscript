@@ -130,8 +130,6 @@ String_View prepro(char *file_name, int depth){
     String_View buffer = read_file_to_buff(file_name);
 	assert(buffer.data != NULL && "There was an issue with the buffer\n");
     String_View result = pass(buffer, depth, file_name);
-	printf("result1: "View_Print"\n", View_Arg(result));
-	printf("------------");
 
     return result;
 }
@@ -162,7 +160,7 @@ String_View pass(String_View view, int depth, char *file_name){
         if(*view.data == '\n'){
             line++;
         } else if(*view.data == COMMENT_CHAR){
-            while(view.len > 0 && *view.data != '\n' && *view.data != '\0'){
+            while(view.len > 0 && *view.data != '\n'){
 				view = view_chop_left(view);
             }
             line++;
@@ -194,15 +192,16 @@ String_View pass(String_View view, int depth, char *file_name){
 				char *imported_name = view_to_cstr(imported_file);
 				strncpy(imported_name, imported_file.data, imported_file.len);
                 String_View imported_buffer = prepro(imported_name, depth + 1);
-				printf(View_Print"\n", View_Arg(view_create(output.data, output.count)));
+				free(imported_name);
 				for(size_t i = 0; i < imported_buffer.len; i++) {
 					DA_APPEND(&output, imported_buffer.data[i]);
 				}
-				printf(View_Print"\n", View_Arg(view_create(output.data, output.count)));
                 //char *file_info = malloc(sizeof(char) * 64);
                 //sprintf(file_info, "\n@\"%s\" %d\n", imported_file, 1);
                 //append_to_output(output, &output_index, file_info, strlen(file_info));
                 line++;
+				view = view_chop_left(view);
+				continue;
             } else {
                 fprintf(stderr, "Unexpected keyword: "View_Print"\n", View_Arg(word));
                 exit(1);
@@ -230,8 +229,6 @@ String_View pass(String_View view, int depth, char *file_name){
 		DA_APPEND(&output, *view.data);
 		view = view_chop_left(view);
     } 
-
-	//DA_APPEND(&output, '\0');
     return view_create(output.data, output.count);
 }
 
