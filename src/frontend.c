@@ -1,5 +1,8 @@
 #include "frontend.h"
 
+#define TIPP_IMPLEMENTATION
+#include "tipp.h"
+
 char *token_types[TT_COUNT] = {"none", "write", "exit", "builtin", "ident", 
                                ":", "(", ")", "[", "]", "{", "}", ",", ".", "=", "==", "!=", ">=", "<=", ">", "<", "+", "-", "*", "/", "%",
                                "string", "char", "integer", "float", "struct", "void", "type", "if", "else", "while", "then", 
@@ -252,6 +255,8 @@ Dynamic_Str generate_string(Arena *arena, String_View *view, Token token, char d
 }
 
 Token_Arr lex(Arena *arena, Arena *string_arena, char *filename, String_View view) {
+	view = prepro(filename, 0);
+	//printf(View_Print, View_Arg(view));
     size_t row = 1;
     Token_Arr tokens = {0};
     const char *start = view.data;
@@ -259,6 +264,9 @@ Token_Arr lex(Arena *arena, Arena *string_arena, char *filename, String_View vie
         Token token = {0};
         token.loc = (Location){.filename = filename, .row=row, .col=view.data-start};
         switch(*view.data) {
+			case '@':
+				while(view.len > 0 && *view.data != '\n') view = view_chop_left(view);
+				break;
             case ':':
                 token.type = TT_COLON;
                 ADA_APPEND(arena, &tokens, token);                                                    
@@ -365,6 +373,11 @@ Token_Arr lex(Arena *arena, Arena *string_arena, char *filename, String_View vie
                     view = view_chop_left(view);                   
                     continue;
                 } else {
+					if(*view.data == '\0') {
+						fprintf(stderr, "%s:%zu:%zu NOTE: Ignoring null-byte\n", token.loc.filename, token.loc.row, token.loc.col);
+						view = view_chop_left(view);
+						continue;
+					}
                     PRINT_ERROR(token.loc, "unexpected token `%c`", *view.data);
                 }
             }
