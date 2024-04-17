@@ -48,6 +48,7 @@
     
 #define PRINT_ERROR(loc, ...)                                                 \
     do {                                                                           \
+		ASSERT((loc).filename != NULL, "Filename cannot be NULL");			\
         fprintf(stderr, "%s:%zu:%zu: error: ", loc.filename, loc.row, loc.col);  \
         fprintf(stderr, __VA_ARGS__);    \
         fprintf(stderr, "\n"); \

@@ -239,7 +239,7 @@ void strip_off_dot(char *str) {
 char *append_ext(char *filename, char *ext) {
     size_t filename_s = strlen(filename);
     char *output = custom_realloc(NULL, sizeof(char)*filename_s);
-    strncpy(output, filename, filename_s);
+    memcpy(output, filename, filename_s);
     strip_off_dot(output);
     char *output_filename = custom_realloc(NULL, sizeof(char)*strlen(output)+strlen(ext)+1);
     sprintf(output_filename, "%s.%s", output, ext);
@@ -353,7 +353,9 @@ void gen_field_offset(Program_State *state, Struct structure, String_View var) {
     size_t offset = 0;
     size_t i;
     for(i = 0; !view_cmp(structure.values.data[i].value.var.name, var); i++) {
-        if(i == structure.values.count) PRINT_ERROR((Location){0}, "unknown field: "View_Print" of struct: "View_Print, View_Arg(var), View_Arg(structure.name));
+		Location loc = {0};
+		loc.filename = "unknown";
+        if(i == structure.values.count) PRINT_ERROR(loc, "unknown field: "View_Print" of struct: "View_Print, View_Arg(var), View_Arg(structure.name));
         offset += (1 * data_type_s[structure.values.data[i].value.var.type]);
     }
     gen_offset(state, offset);
