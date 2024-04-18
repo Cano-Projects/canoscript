@@ -159,17 +159,35 @@ typedef enum {
     EXPR_VAR,
     EXPR_FUNCALL,
     EXPR_ARR,
+	EXPR_STRUCT,
     EXPR_FIELD,
 	EXPR_FIELD_ARR,
     EXPR_BUILTIN,
     EXPR_COUNT,
 } Expr_Type;
+	
+typedef struct {
+    struct Node *data;
+    size_t count;
+    size_t capacity;
+} Nodes;
+	
+typedef struct {
+    String_View name;
+    Nodes values;
+} Struct;
+	
+typedef struct {
+	String_View name;
+	Exprs values;
+} Structure;
 
 typedef union {
     Bin_Expr bin;
     int integer;
     double floating;
     Field field;
+	Structure structure;
     Array array;
     String_View variable;
     String_View string;
@@ -184,7 +202,6 @@ typedef struct Expr {
 	Type_Type data_type;
     Location loc;
 } Expr;
-    
 
 typedef enum {
     VAR_STRING,
@@ -217,12 +234,6 @@ typedef struct {
     Args args;
     int type;
 } Native_Call;
-    
-typedef struct {
-    struct Node *data;
-    size_t count;
-    size_t capacity;
-} Nodes;
 
 typedef struct {
     String_View name;
@@ -280,11 +291,6 @@ typedef struct {
 	size_t count;
 	size_t capacity;
 } Functions;
-    
-typedef struct {
-    String_View name;
-    Nodes values;
-} Struct;
 
 typedef struct {
     Variable *data;

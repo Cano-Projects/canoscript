@@ -27,7 +27,7 @@ Expr *parse_expr_1(Parser *parser, Expr *lhs, Precedence min_precedence);
 Node parse_native_node(Parser *parser, int native_value);
 Node parse_var_dec(Parser *parser);
 Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack);
-Struct get_structure(Location loc, Nodes *structs, String_View name);
+Struct get_structure(Location loc, Parser *parser, String_View name);
 bool is_field(Struct *structure, String_View field);
 bool is_in_function(Blocks *blocks);
 

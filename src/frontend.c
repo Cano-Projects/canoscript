@@ -574,9 +574,8 @@ Expr *parse_primary(Parser *parser) {
 	Arena *arena = parser->arena;
 	Token_Arr *tokens = parser->tokens;
 	Functions *functions = parser->functions;
-	Nodes *structs = parser->structs;
 	Token token = token_consume(tokens);
-    if(token.type != TT_INT && token.type != TT_BUILTIN && token.type != TT_FLOAT_LIT && token.type != TT_O_PAREN && token.type != TT_STRING && token.type != TT_CHAR_LIT && token.type != TT_IDENT) {
+    if(token.type != TT_INT && token.type != TT_O_CURLY && token.type != TT_BUILTIN && token.type != TT_FLOAT_LIT && token.type != TT_O_PAREN && token.type != TT_STRING && token.type != TT_CHAR_LIT && token.type != TT_IDENT) {
         PRINT_ERROR(token.loc, "expected int, string, char, or ident but found %s", token_types[token.type]);
     }
     Expr *expr = arena_alloc(arena, sizeof(Expr));   
@@ -618,6 +617,17 @@ Expr *parse_primary(Parser *parser) {
             };
             if(expr->value.builtin.return_type == TYPE_VOID) expr->return_type = TYPE_VOID;
         } break;
+		case TT_O_CURLY: {
+			expr->type = EXPR_STRUCT;
+			expr->data_type = TYPE_PTR;
+			Token token = token_peek(tokens, 0);
+			while(token.type != TT_C_CURLY) {
+				ADA_APPEND(parser->arena, &expr->value.structure.values, parse_expr(parser));
+				if(token_peek(tokens, 0).type == TT_C_CURLY) break;
+				else if(token_consume(tokens).type != TT_COMMA) PRINT_ERROR(token.loc, "expected `,`");
+			}
+			token_consume(tokens);
+		} break;
         case TT_O_PAREN:
             expr = parse_expr(parser);
 			token = token_consume(tokens);
@@ -664,8 +674,10 @@ Expr *parse_primary(Parser *parser) {
                 *expr = (Expr){
                     .type = EXPR_FIELD,
                     .value.field.structure = token.value.ident,
+					.loc = token.loc,
                 };
-				Struct structure = get_structure(expr->loc, structs, expr->value.field.structure);
+				Variable struct_var = get_var(expr->loc, parser, expr->value.field.structure);
+				Struct structure = get_structure(expr->loc, parser, struct_var.struct_name);
                 token_consume(tokens); // dot
                 token = token_consume(tokens); // field name
 				size_t i;
@@ -769,6 +781,7 @@ Node parse_var_dec(Parser *parser) {
     } else if(is_struct(tokens, parser)) {
         node.value.var.is_struct = true;
         node.value.var.struct_name = name_t.value.ident;
+		node.value.var.type = TYPE_PTR;
     } else {
         PRINT_ERROR(token_peek(tokens, 0).loc, "expected `type` but found `%s`\n", token_types[token_peek(tokens, 0).type]);
     }
@@ -781,10 +794,11 @@ Node parse_var_dec(Parser *parser) {
     return node;
 }
 
-Struct get_structure(Location loc, Nodes *structs, String_View name) {
-    for(size_t i = 0; i < structs->count; i++) {
-        if(view_cmp(name, structs->data[i].value.structs.name)) {
-            return structs->data[i].value.structs;
+Struct get_structure(Location loc, Parser *parser, String_View name) {
+    for(size_t i = 0; i < parser->symbols.count; i++) {
+		if(parser->symbols.data[i].type != SYMBOL_STRUCT) continue;
+        if(view_cmp(name, parser->symbols.data[i].val.structure.name)) {
+            return parser->symbols.data[i].val.structure;
         }
     }
     PRINT_ERROR(loc, "unknown struct\n");
@@ -915,8 +929,13 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                             else PRINT_ERROR(tokens.data[0].loc, "expected `,` but found `%s`\n", token_types[tokens.data[0].type]);       
                         }
                     } else if(node.value.var.is_struct) { 
+						Expr *expr = parse_expr(&parser);
+						if(expr->data_type != TYPE_PTR) PRINT_ERROR(node.loc, 
+													"expected struct definition but found `%s`", data_types[expr->type].data);
+						ADA_APPEND(parser.arena, &node.value.var.value, expr);
+						/*
 						expect_token(&tokens, TT_O_CURLY);
-                        Struct structure = get_structure(node.loc, &structs, node.value.var.struct_name);
+                        Struct structure = get_structure(node.loc, &parser, node.value.var.struct_name);
                         while(tokens.count > 0 && token_peek(&tokens, 0).type != TT_C_CURLY) {
                             Token identifier = expect_token(&tokens, TT_IDENT);
                             if(!is_field(&structure, identifier.value.ident)) PRINT_ERROR(identifier.loc, "unknown field: "View_Print, View_Arg(identifier.value.ident));
@@ -929,6 +948,7 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                             if(comma_t.type != TT_COMMA) PRINT_ERROR(comma_t.loc, "expected `,` but found %s\n", token_types[comma_t.type]);                            
                         }
                         if(token_peek(&tokens, 0).type == TT_C_CURLY) token_consume(&tokens);
+						*/
                     } else {
                         ADA_APPEND(arena, &node.value.var.value, parse_expr(&parser));    
 						if(node.value.var.value.data[0]->data_type != node.value.var.type && node.value.var.type != TYPE_STR) {
@@ -950,6 +970,7 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 					if(node.type == TYPE_VAR_REASSIGN) {
 	                    ADA_APPEND(arena, &node.value.var.value, parse_expr(&parser));
 	                } else if(node.type == TYPE_FIELD_REASSIGN) {
+						node.value.field.var_name = token_consume(&tokens).value.ident; // consume ident
 	                    expect_token(&tokens, TT_EQ);
 	                    ADA_APPEND(arena, &node.value.field.value, parse_expr(&parser));
 	                } else if(node.type == TYPE_ARR_INDEX) {

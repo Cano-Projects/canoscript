@@ -228,6 +228,16 @@ void gen_struct_value(Program_State *state, size_t field_pos, Node *field, Node 
         }
     }
 }
+
+void gen_structure_field(Program_State *state, size_t offset, Expr *expr) {
+	gen_push(state, offset);
+	gen_add(state);
+	Inst inst = create_inst(INST_TOVP, (Word){.as_int=0}, 0);
+	DA_APPEND(&state->machine.instructions, inst);
+	gen_expr(state, expr);
+	gen_push(state, data_type_s[expr->type]);
+	gen_write(state);
+}
     
 void strip_off_dot(char *str) {
     while(*str != '\0' && *str != '.') {
@@ -398,6 +408,13 @@ void gen_expr(Program_State *state, Expr *expr) {
 			if(get_variable(state, expr->value.variable).global) gen_global_indup(state, index);
             else gen_indup(state, state->stack_s-index); 
         } break;
+		case EXPR_STRUCT: {
+			size_t offset = 0;
+			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
+				offset += data_type_s[expr->value.structure.values.data[i]->data_type];
+				gen_structure_field(state, offset, expr->value.structure.values.data[i]);
+			}
+		} break;
         case EXPR_FUNCALL: {
             Function *function = get_func(state->program.functions, expr->value.func_call.name);
             if(!function) { 
@@ -485,15 +502,16 @@ void gen_var_dec(Program_State *state, Node *node) {
                gen_write(state);
            }
        } else if(node->value.var.is_struct) {
-           Node cur_struct = get_struct(state->structs, node->value.var.struct_name);
-           size_t alloc_s = 0;
-           for(size_t i = 0; i < cur_struct.value.structs.values.count; i++) {
-               alloc_s += data_type_s[cur_struct.value.structs.values.data[i].value.var.type];
-           }
-           gen_struct_alloc(state, alloc_s);
-           for(size_t i = 0; i < cur_struct.value.structs.values.count; i++) {
-               gen_struct_value(state, i, &cur_struct.value.structs.values.data[i], node);
-           }
+			Node cur_struct = get_struct(state->structs, node->value.var.struct_name);		
+			for(size_t i = 0; i < node->value.var.value.data[0]->value.structure.values.count; i++) {
+				node->value.var.value.data[0]->value.structure.name = cur_struct.value.structs.name;
+			}
+			size_t alloc_s = 0;
+			for(size_t i = 0; i < cur_struct.value.structs.values.count; i++) {
+				alloc_s += data_type_s[cur_struct.value.structs.values.data[i].value.var.type];
+			}
+			gen_struct_alloc(state, alloc_s);
+			gen_expr(state, node->value.var.value.data[0]);
        } else {
            gen_expr(state, node->value.var.value.data[0]);                                    
        }
