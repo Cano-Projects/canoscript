@@ -744,11 +744,12 @@ Node parse_native_node(Parser *parser, int native_value) {
 }
 
 // TODO: update to use proper symbol table
-bool is_struct(Token_Arr *tokens, Nodes *structs) {
+bool is_struct(Token_Arr *tokens, Parser *parser) {
     Token token = token_peek(tokens, 0);
     if(token.type != TT_IDENT) PRINT_ERROR(token.loc, "expected identifier but found `%s`\n", token_types[token.type]);
-    for(size_t i = 0; i < structs->count; i++) {
-        if(view_cmp(structs->data[i].value.structs.name, token.value.ident)) return true;
+    for(size_t i = 0; i < parser->symbols.count; i++) {
+		Symbol symbol = parser->symbols.data[i];
+        if(symbol.type == SYMBOL_STRUCT && view_cmp(symbol.val.structure.name, token.value.ident)) return true;
     }
     return false;
 }
@@ -756,7 +757,6 @@ bool is_struct(Token_Arr *tokens, Nodes *structs) {
     
 Node parse_var_dec(Parser *parser) {
     Token_Arr *tokens = parser->tokens;
-    Nodes *structs = parser->structs;
     Node node = {0};
     node.type = TYPE_VAR_DEC;
     node.loc = tokens->data[0].loc;
@@ -766,7 +766,7 @@ Node parse_var_dec(Parser *parser) {
     Token name_t = token_peek(tokens, 0);
     if(name_t.type == TT_TYPE) {
         node.value.var.type = tokens->data[0].value.type;       
-    } else if(is_struct(tokens, structs)) {
+    } else if(is_struct(tokens, parser)) {
         node.value.var.is_struct = true;
         node.value.var.struct_name = name_t.value.ident;
     } else {
@@ -1001,6 +1001,8 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                 token_consume(&tokens);
                 Token name_t = expect_token(&tokens, TT_IDENT);
                 node.value.structs.name = name_t.value.ident;
+                Symbol symbol = {.type=SYMBOL_STRUCT, .val.structure=node.value.structs};
+                ADA_APPEND(arena, &parser.symbols, symbol);
 				expect_token(&tokens, TT_O_CURLY);
                 while(tokens.count > 0 && token_peek(&tokens, 0).type != TT_C_CURLY) {
                     Node arg = parse_var_dec(&parser);
@@ -1010,8 +1012,9 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                 }
                 token_consume(&tokens);
                 ADA_APPEND(arena, &structs, node);
-                Symbol symbol = {.type=SYMBOL_STRUCT, .val.structure=node.value.structs};
-                ADA_APPEND(arena, &parser.symbols, symbol);
+				symbol.val.structure = node.value.structs;
+				ASSERT(parser.symbols.count > 0, "There was an issue with the symbol table");
+				parser.symbols.data[parser.symbols.count-1] = symbol;										
             } break;
             case TT_RET: {
                 node.type = TYPE_RET;
