@@ -230,12 +230,13 @@ void gen_struct_value(Program_State *state, size_t field_pos, Node *field, Node 
 }
 
 void gen_structure_field(Program_State *state, size_t offset, Expr *expr) {
+	gen_dup(state);
 	gen_push(state, offset);
 	gen_add(state);
 	Inst inst = create_inst(INST_TOVP, (Word){.as_int=0}, 0);
 	DA_APPEND(&state->machine.instructions, inst);
 	gen_expr(state, expr);
-	gen_push(state, data_type_s[expr->type]);
+	gen_push(state, data_type_s[expr->data_type]);
 	gen_write(state);
 }
     
@@ -410,9 +411,14 @@ void gen_expr(Program_State *state, Expr *expr) {
         } break;
 		case EXPR_STRUCT: {
 			size_t offset = 0;
+			/*
+            Variable variable = get_variable(state, expr->value.structure.name);
+			if(variable.global) gen_global_indup(state, variable.stack_pos);
+            else gen_indup(state, state->stack_s-variable.stack_pos); 
+			*/
 			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
-				offset += data_type_s[expr->value.structure.values.data[i]->data_type];
 				gen_structure_field(state, offset, expr->value.structure.values.data[i]);
+				offset += data_type_s[expr->value.structure.values.data[i]->data_type];				
 			}
 		} break;
         case EXPR_FUNCALL: {

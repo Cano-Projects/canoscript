@@ -621,7 +621,7 @@ Expr *parse_primary(Parser *parser) {
 			expr->type = EXPR_STRUCT;
 			expr->data_type = TYPE_PTR;
 			Token token = token_peek(tokens, 0);
-			while(token.type != TT_C_CURLY) {
+			while(true) {
 				ADA_APPEND(parser->arena, &expr->value.structure.values, parse_expr(parser));
 				if(token_peek(tokens, 0).type == TT_C_CURLY) break;
 				else if(token_consume(tokens).type != TT_COMMA) PRINT_ERROR(token.loc, "expected `,`");
@@ -930,25 +930,11 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                         }
                     } else if(node.value.var.is_struct) { 
 						Expr *expr = parse_expr(&parser);
-						if(expr->data_type != TYPE_PTR) PRINT_ERROR(node.loc, 
-													"expected struct definition but found `%s`", data_types[expr->type].data);
+						expr->value.structure.name = node.value.var.name;
+						if(expr->data_type != TYPE_PTR) 
+									PRINT_ERROR(node.loc, 
+										"expected struct definition but found `%s`", data_types[expr->type].data);
 						ADA_APPEND(parser.arena, &node.value.var.value, expr);
-						/*
-						expect_token(&tokens, TT_O_CURLY);
-                        Struct structure = get_structure(node.loc, &parser, node.value.var.struct_name);
-                        while(tokens.count > 0 && token_peek(&tokens, 0).type != TT_C_CURLY) {
-                            Token identifier = expect_token(&tokens, TT_IDENT);
-                            if(!is_field(&structure, identifier.value.ident)) PRINT_ERROR(identifier.loc, "unknown field: "View_Print, View_Arg(identifier.value.ident));
-                            Arg arg = {.name = identifier.value.ident, .type = ARG_EXPR};
-							expect_token(&tokens, TT_EQ);
-                            arg.value.expr = parse_expr(&parser);
-                            Token comma_t = token_consume(&tokens);
-                            ADA_APPEND(arena, &node.value.var.struct_value, arg);
-                            if(comma_t.type == TT_C_CURLY) break;
-                            if(comma_t.type != TT_COMMA) PRINT_ERROR(comma_t.loc, "expected `,` but found %s\n", token_types[comma_t.type]);                            
-                        }
-                        if(token_peek(&tokens, 0).type == TT_C_CURLY) token_consume(&tokens);
-						*/
                     } else {
                         ADA_APPEND(arena, &node.value.var.value, parse_expr(&parser));    
 						if(node.value.var.value.data[0]->data_type != node.value.var.type && node.value.var.type != TYPE_STR) {
