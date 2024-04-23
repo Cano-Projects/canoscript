@@ -411,11 +411,6 @@ void gen_expr(Program_State *state, Expr *expr) {
         } break;
 		case EXPR_STRUCT: {
 			size_t offset = 0;
-			/*
-            Variable variable = get_variable(state, expr->value.structure.name);
-			if(variable.global) gen_global_indup(state, variable.stack_pos);
-            else gen_indup(state, state->stack_s-variable.stack_pos); 
-			*/
 			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
 				gen_structure_field(state, offset, expr->value.structure.values.data[i]);
 				offset += data_type_s[expr->value.structure.values.data[i]->data_type];				
