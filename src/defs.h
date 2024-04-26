@@ -13,8 +13,8 @@
 #define DATA_START_CAPACITY 16
 
 #define NATIVE_OPEN 0
-#define NATIVE_WRITE 1
-#define NATIVE_EXIT 60
+#define NATIVE_WRITE 0
+#define NATIVE_EXIT 1
 
 #define STDOUT 1
 
@@ -61,6 +61,8 @@ typedef enum {
     BUILTIN_STORE,
     BUILTIN_TOVP,
     BUILTIN_GET,        
+	BUILTIN_DLL,
+	BUILTIN_CALL,	
 } Builtin_Type;
     
 typedef struct {

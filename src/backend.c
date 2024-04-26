@@ -357,6 +357,30 @@ void gen_builtin(Program_State *state, Expr *expr) {
 			DA_APPEND(&state->machine.instructions, inst);
             state->stack_s -= 1;
         } break;
+        case BUILTIN_DLL: {
+            if(expr->value.builtin.value.count != 2) {
+                PRINT_ERROR(expr->loc, "incorrect arg amounts for get");
+            }
+			for(size_t i = 0; i < expr->value.builtin.value.count; i++) {
+				gen_expr(state, expr->value.builtin.value.data[i]);
+			}
+			Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
+			DA_APPEND(&state->machine.instructions, inst);
+            state->stack_s -= 2;
+        } break;
+        case BUILTIN_CALL: {
+				/*		
+            if(expr->value.builtin.value.count != 1) {
+                PRINT_ERROR(expr->loc, "incorrect arg amounts for get");
+            }
+			for(size_t i = 0; i < expr->value.builtin.value.count; i++) {
+				gen_expr(state, expr->value.builtin.value.data[i]);
+			}
+			*/
+			Inst inst = create_inst(INST_NATIVE, (Word){.as_int=2}, 0);
+			DA_APPEND(&state->machine.instructions, inst);
+            //state->stack_s -= 2;
+        } break;
     }
 }
 

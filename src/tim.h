@@ -67,6 +67,7 @@ typedef enum {
     INST_PRINT,
     INST_NATIVE,
     INST_ENTRYPOINT,
+	INST_LOAD_LIBRARY,
     INST_SS,
     INST_HALT,
     INST_COUNT,
@@ -770,13 +771,8 @@ void machine_load_native(Machine *machine, native ptr) {
 }
 
 void run_instructions(Machine *machine) {
-    void (*native_ptrs[100])(Machine*) = {native_open, native_write, native_read, 
-                                         native_close, native_malloc, native_realloc, 
-                                         native_free, native_scanf, native_pow};
-    native_ptrs[10] = native_time;
-    native_ptrs[60] = native_exit;
-	machine_load_native(machine, native_open);
-	memcpy(machine->native_ptrs, native_ptrs, sizeof(native));
+	machine_load_native(machine, native_write);
+	machine_load_native(machine, native_exit);
     Data a, b;
     Word yes; 
 	yes.as_int = 1;
@@ -1174,11 +1170,13 @@ void run_instructions(Machine *machine) {
             case INST_HALT:
                 ip = machine->program_size;
                 break;
-			case LOAD_LIBRARY: {
-				char *lib_name = (char*)pop(machine).word.as_pointer;
+			case INST_LOAD_LIBRARY: {
 				char *func_name = (char*)pop(machine).word.as_pointer;
-				void *lib = dlopen(lib_name, RTLD_NOW);
-				ASSERT(lib, "library doesnt exist");
+				char *lib_name = (char*)pop(machine).word.as_pointer;			
+				void *lib = dlopen(lib_name, RTLD_LAZY);
+				if(!lib) {
+					fprintf(stderr, "%s\n", dlerror());
+				}
 				native func;
 				*(void**)(&func) = dlsym(lib, func_name);				
 				machine_load_native(machine, func);

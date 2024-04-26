@@ -124,6 +124,8 @@ Keyword builtins_list[] = {
 	{LITERAL_VIEW("store"), BUILTIN_STORE},	
 	{LITERAL_VIEW("tovp"), BUILTIN_TOVP},		
 	{LITERAL_VIEW("get"), BUILTIN_GET},	
+	{LITERAL_VIEW("dll"), BUILTIN_DLL},	
+	{LITERAL_VIEW("call"), BUILTIN_CALL},			
 };
 #define BUILTIN_COUNT sizeof(builtins_list)/sizeof(*builtins_list)
 
@@ -542,8 +544,12 @@ Builtin parse_builtin_node(Builtin_Type type, Parser *parser) {
             break;
         case BUILTIN_STORE:
         case BUILTIN_DEALLOC:
+		case BUILTIN_DLL:
             builtin.return_type = TYPE_VOID;
             break;        
+		case BUILTIN_CALL:
+			builtin.return_type = TYPE_INT;
+			break;
     }
     return builtin;
 }
