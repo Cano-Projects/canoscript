@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <dlfcn.h>
 
 #include "defs.h"
 
@@ -162,8 +163,12 @@ typedef struct {
 	size_t count;
 	size_t capacity;
 } Str_Stack;
+	
+struct Machine;
 
-typedef struct {
+typedef void (*native)(struct Machine*);
+
+typedef struct Machine {
     Data stack[MAX_STACK_SIZE];
     int stack_size;
     Str_Stack str_stack;
@@ -177,6 +182,9 @@ typedef struct {
     bool has_entrypoint;
 
     Register registers[AMOUNT_OF_REGISTERS];
+		
+	native native_ptrs[100];
+	size_t native_ptrs_s;
 
     Insts instructions;
 } Machine;
@@ -211,6 +219,7 @@ void write_program_to_file(Machine *machine, char *file_path);
 Machine *read_program_from_file(Machine *machine, char *file_path);
 void machine_disasm(Machine *machine);
 void machine_free(Machine *machine);
+void machine_load_native(Machine *machine, native ptr);
 void run_instructions(Machine *machine);
 
 
@@ -755,12 +764,19 @@ void machine_free(Machine *machine) {
 	free(machine->str_stack.data);
 } 
 
+void machine_load_native(Machine *machine, native ptr) {
+	ASSERT(ptr != NULL, "function pointer cannot be null");
+	machine->native_ptrs[machine->native_ptrs_s++] = ptr;	
+}
+
 void run_instructions(Machine *machine) {
     void (*native_ptrs[100])(Machine*) = {native_open, native_write, native_read, 
                                          native_close, native_malloc, native_realloc, 
                                          native_free, native_scanf, native_pow};
     native_ptrs[10] = native_time;
     native_ptrs[60] = native_exit;
+	machine_load_native(machine, native_open);
+	memcpy(machine->native_ptrs, native_ptrs, sizeof(native));
     Data a, b;
     Word yes; 
 	yes.as_int = 1;
@@ -1150,7 +1166,7 @@ void run_instructions(Machine *machine) {
                 push(machine, (Word){.as_int=machine->stack_size}, INT_TYPE);
                 break;
             case INST_NATIVE: {
-                (*native_ptrs[machine->instructions.data[ip].value.as_int])(machine);
+                machine->native_ptrs[machine->instructions.data[ip].value.as_int](machine);
             } break;
             case INST_ENTRYPOINT:
                 assert(false);
@@ -1158,6 +1174,15 @@ void run_instructions(Machine *machine) {
             case INST_HALT:
                 ip = machine->program_size;
                 break;
+			case LOAD_LIBRARY: {
+				char *lib_name = (char*)pop(machine).word.as_pointer;
+				char *func_name = (char*)pop(machine).word.as_pointer;
+				void *lib = dlopen(lib_name, RTLD_NOW);
+				ASSERT(lib, "library doesnt exist");
+				native func;
+				*(void**)(&func) = dlsym(lib, func_name);				
+				machine_load_native(machine, func);
+			} break;
             case INST_COUNT:
                 assert(false);
         }
