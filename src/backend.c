@@ -358,12 +358,8 @@ void gen_builtin(Program_State *state, Expr *expr) {
             state->stack_s -= 1;
         } break;
         case BUILTIN_DLL: {
-            if(expr->value.builtin.value.count != 2) {
-                PRINT_ERROR(expr->loc, "incorrect arg amounts for get");
-            }
-			for(size_t i = 0; i < expr->value.builtin.value.count; i++) {
-				gen_expr(state, expr->value.builtin.value.data[i]);
-			}
+			gen_push_str(state, expr->value.builtin.ext_func.file_name);
+			gen_push_str(state, expr->value.builtin.ext_func.name);				
 			Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
 			DA_APPEND(&state->machine.instructions, inst);
             state->stack_s -= 2;

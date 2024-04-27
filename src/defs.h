@@ -128,11 +128,26 @@ typedef struct {
     size_t count;
     size_t capacity;
 } Exprs;
+	
+typedef struct {
+	Type_Type *data;
+	size_t count;
+	size_t capacity;
+} Data_Types;
+
+typedef struct {
+	String_View file_name;
+	String_View name;
+	Data_Types args;
+	Type_Type return_type;
+} Ext_Func;
     
 typedef struct {
     Builtin_Type type;
     Exprs value;
     Type_Type return_type;
+	// optional
+	Ext_Func ext_func;	
 } Builtin;
 
 typedef struct {
@@ -260,6 +275,7 @@ typedef enum {
     TYPE_THEN,
     TYPE_FUNC_DEC,
     TYPE_FUNC_CALL,
+	TYPE_EXT_FUNC,
     TYPE_STRUCT,
     TYPE_ARR_INDEX,
     TYPE_RET,
@@ -443,12 +459,14 @@ typedef union {
 	Function function;
 	Variable var;
 	Struct structure;
+	String_View ext;
 } Symbol_Value;
 	
 typedef enum {
 	SYMBOL_FUNC,
 	SYMBOL_VAR,
 	SYMBOL_STRUCT,
+	SYMBOL_EXT,
 } Symbol_Type;
 	
 typedef struct {

@@ -524,6 +524,27 @@ void print_expr(Expr *expr) {
         print_expr(expr->value.bin.rhs);        
     }
 }
+
+Ext_Func parse_external_func_dec(Parser *parser) {
+	Arena *arena = parser->arena;
+	Token_Arr *tokens = parser->tokens;
+	Ext_Func ext_func = {0};
+	Token token = expect_token(tokens, TT_IDENT);
+	ext_func.name = token.value.ident;
+	token = expect_token(tokens, TT_O_PAREN);
+	// exit condition defined in loop
+	while(true) {
+		token = expect_token(tokens, TT_TYPE);
+		ADA_APPEND(arena, &ext_func.args, token.value.type);
+		token = token_consume(tokens);
+		if(token.type == TT_C_PAREN) break;
+		else if(token.type != TT_COMMA) PRINT_ERROR(token.loc, "expected comma but found `%s`", token_types[token.type]);
+	}
+	expect_token(tokens, TT_COLON);
+	token = expect_token(tokens, TT_TYPE);
+	ext_func.return_type = token.value.type;
+	return ext_func;
+}
     
 Builtin parse_builtin_node(Builtin_Type type, Parser *parser) { 
     Arena *arena = parser->arena;
@@ -531,11 +552,24 @@ Builtin parse_builtin_node(Builtin_Type type, Parser *parser) {
     Builtin builtin = {
         .type = type,
     };
-    ADA_APPEND(arena, &builtin.value, parse_expr(parser));
-    while(token_peek(tokens, 0).type == TT_COMMA) {
-        token_consume(tokens);
-        ADA_APPEND(arena, &builtin.value, parse_expr(parser));        
-    }
+	if(builtin.type == BUILTIN_DLL) {
+		Token file_name = expect_token(tokens, TT_STRING);
+        Symbol symbol = {.val.ext=file_name.value.string, .type=SYMBOL_EXT};
+        ADA_APPEND(arena, &parser->symbols, symbol);
+		Token token = token_consume(tokens);
+		if(token.type != TT_COMMA) {
+			PRINT_ERROR(token.loc, "expected comma but found `%s`\n", token_types[token.type]);
+		}
+		Ext_Func func_dec = parse_external_func_dec(parser);
+		func_dec.file_name = file_name.value.string;
+		builtin.ext_func = func_dec;	
+	} else {
+	    ADA_APPEND(arena, &builtin.value, parse_expr(parser));
+	    while(token_peek(tokens, 0).type == TT_COMMA) {
+	        token_consume(tokens);
+	        ADA_APPEND(arena, &builtin.value, parse_expr(parser));        
+	    }
+	}
     switch(type) {
         case BUILTIN_TOVP:
         case BUILTIN_GET:        
@@ -881,7 +915,7 @@ int parse_reassign_left(Parser *parser, Node *node) {
 									data_types[cur_arg.type].data,
 									data_types[arg->data_type].data
 							       );
-					}								
+					}	
                 }
             }
         }
