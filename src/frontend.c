@@ -629,6 +629,7 @@ Ext_Func_Call parse_ext_func_call(Parser *parser, Ext_Func *func) {
 		ADA_APPEND(parser->arena, &ext.args, expr);
 		if(i != func->args.count-1) expect_token(parser->tokens, TT_COMMA);
 	}	
+	ext.return_type = func->return_type;
 	return ext;
 }
 

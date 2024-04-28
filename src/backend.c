@@ -501,6 +501,7 @@ void gen_expr(Program_State *state, Expr *expr) {
 					if(view_cmp(state->symbols.data[i].val.ext.name, name)) {
 						gen_native(state, ext_count+2);
 						state->stack_s -= expr->value.ext.args.count;
+						if(expr->value.ext.return_type != TYPE_VOID) state->stack_s++;
 						break;
 					}
 					ext_count++;					

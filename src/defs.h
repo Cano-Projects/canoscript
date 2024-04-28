@@ -144,6 +144,7 @@ typedef struct {
 typedef struct {
 	String_View name;
 	Exprs args;
+	Type_Type return_type;
 } Ext_Func_Call;
     
 typedef struct {
