@@ -388,12 +388,39 @@ typedef struct {
     size_t count;
     size_t capacity;
 } Blocks;
-    
+
+typedef union {
+	Function function;
+	Variable var;
+	Struct structure;
+	Ext_Func ext;
+} Symbol_Value;
+	
+typedef enum {
+	SYMBOL_FUNC,
+	SYMBOL_VAR,
+	SYMBOL_STRUCT,
+	SYMBOL_EXT,
+} Symbol_Type;
+	
+typedef struct {
+	Symbol_Value val;
+	Symbol_Type type;
+} Symbol;
+
+typedef struct {
+	Symbol *data;
+	size_t count;
+	size_t capacity;
+} Symbols;
+
 typedef struct {
     Nodes nodes;  
     Functions functions;
     Nodes structs;
 	Nodes vars;
+	Nodes ext_nodes;
+	Symbols symbols;
 } Program;
 
 typedef enum {
@@ -461,36 +488,12 @@ typedef struct {
     size_t capacity;
 } Token_Arr;
 
-typedef union {
-	Function function;
-	Variable var;
-	Struct structure;
-	Ext_Func ext;
-} Symbol_Value;
-	
-typedef enum {
-	SYMBOL_FUNC,
-	SYMBOL_VAR,
-	SYMBOL_STRUCT,
-	SYMBOL_EXT,
-} Symbol_Type;
-	
-typedef struct {
-	Symbol_Value val;
-	Symbol_Type type;
-} Symbol;
-
-typedef struct {
-	Symbol *data;
-	size_t count;
-	size_t capacity;
-} Symbols;
-	
 typedef struct {
 	Arena *arena;
 	Token_Arr *tokens;
 	Blocks *blocks;
 	Nodes *variables;
+	Nodes ext_nodes;
 	Functions *functions;
 	Nodes *structs;
 	Symbols symbols;

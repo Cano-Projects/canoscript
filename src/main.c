@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
     Program_State state = {0};
 	state.program = program;
     state.structs = program.structs;
+	state.symbols = program.symbols;
     generate(&state, &program);
 	
 	state.machine.program_size = state.machine.instructions.count;

@@ -365,7 +365,7 @@ void gen_builtin(Program_State *state, Expr *expr) {
         case BUILTIN_DLL: {
 			gen_push_str(state, expr->value.builtin.ext_func.file_name);
 			gen_push_str(state, expr->value.builtin.ext_func.name);				
-			DA_APPEND(&state->exts, expr->value.builtin.ext_func.name);
+			//DA_APPEND(&state->exts, expr->value.builtin.ext_func.name);
 			Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
 			DA_APPEND(&state->machine.instructions, inst);
             state->stack_s -= 2;
@@ -495,11 +495,15 @@ void gen_expr(Program_State *state, Expr *expr) {
 			for(size_t i = 0; i < expr->value.ext.args.count; i++) {
 				gen_expr(state, expr->value.ext.args.data[i]);
 			}
-			for(size_t i = 0; i < state->exts.count; i++) {
-				if(view_cmp(state->exts.data[i], name)) {
-					gen_native(state, i+2);
-					state->stack_s -= expr->value.ext.args.count;
-					break;
+			size_t ext_count = 0;			
+			for(size_t i = 0; i < state->symbols.count; i++) {
+				if(state->symbols.data[i].type == SYMBOL_EXT) {
+					if(view_cmp(state->symbols.data[i].val.ext.name, name)) {
+						gen_native(state, ext_count+2);
+						state->stack_s -= expr->value.ext.args.count;
+						break;
+					}
+					ext_count++;					
 				}
 			}
 			//ASSERT(false, "something went wrong with the external function "View_Print"'s args", View_Arg(name));
@@ -763,6 +767,9 @@ void gen_label_arr(Program_State *state) {
 }
     
 void generate(Program_State *state, Program *program) {
+	for(size_t i = 0; i < program->ext_nodes.count; i++) {
+		gen_builtin(state, program->ext_nodes.data[i].value.expr_stmt);
+	}
 	gen_vars(state, program);
     gen_program(state, program->nodes);
 	gen_label_arr(state);	

@@ -31,6 +31,7 @@ typedef struct {
 	Labels labels;
 	Ext_Numbers exts;	
 	Machine machine;
+	Symbols symbols;
 } Program_State;
     
 void gen_push(Program_State *state, int value);

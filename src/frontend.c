@@ -958,6 +958,7 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
     Functions functions = {0};
     Nodes structs = {0};
 	Nodes vars = {0};
+	Nodes ext_nodes = {0};
     size_t cur_label = 0;
     Size_Stack labels = {0};
     Parser parser = {
@@ -967,6 +968,7 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
         .blocks = block_stack,
         .arena = arena,
         .tokens = &tokens,
+		.ext_nodes = ext_nodes,
     };
     while(tokens.count > 0) {
         Node node = {.loc=tokens.data[0].loc};    
@@ -1150,7 +1152,8 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
             case TT_BUILTIN: {
                 node.type = TYPE_EXPR_STMT;
                 node.value.expr_stmt = parse_expr(&parser);
-                ADA_APPEND(arena, &root, node);
+				if(node.value.expr_stmt->value.builtin.type == BUILTIN_DLL) ADA_APPEND(arena, &parser.ext_nodes, node);
+				else ADA_APPEND(arena, &root, node);
             } break;
             case TT_VOID:
             case TT_PLUS:
@@ -1187,5 +1190,7 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
     program.functions = functions;
     program.structs = structs;
 	program.vars = vars;
+	program.symbols = parser.symbols;
+	program.ext_nodes = parser.ext_nodes;
     return program;
 }
