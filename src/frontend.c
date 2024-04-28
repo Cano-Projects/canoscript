@@ -554,8 +554,6 @@ Builtin parse_builtin_node(Builtin_Type type, Parser *parser) {
     };
 	if(builtin.type == BUILTIN_DLL) {
 		Token file_name = expect_token(tokens, TT_STRING);
-        Symbol symbol = {.val.ext=file_name.value.string, .type=SYMBOL_EXT};
-        ADA_APPEND(arena, &parser->symbols, symbol);
 		Token token = token_consume(tokens);
 		if(token.type != TT_COMMA) {
 			PRINT_ERROR(token.loc, "expected comma but found `%s`\n", token_types[token.type]);
@@ -563,6 +561,8 @@ Builtin parse_builtin_node(Builtin_Type type, Parser *parser) {
 		Ext_Func func_dec = parse_external_func_dec(parser);
 		func_dec.file_name = file_name.value.string;
 		builtin.ext_func = func_dec;	
+        Symbol symbol = {.val.ext=func_dec, .type=SYMBOL_EXT};
+        ADA_APPEND(arena, &parser->symbols, symbol);
 	} else {
 	    ADA_APPEND(arena, &builtin.value, parse_expr(parser));
 	    while(token_peek(tokens, 0).type == TT_COMMA) {
@@ -588,6 +588,14 @@ Builtin parse_builtin_node(Builtin_Type type, Parser *parser) {
     return builtin;
 }
 
+Ext_Func *get_ext_func(Parser *parser, String_View name) {
+    for(size_t i = 0; i < parser->symbols.count; i++) {
+        if(parser->symbols.data[i].type == SYMBOL_EXT && 
+		   view_cmp(parser->symbols.data[i].val.ext.name, name)) return &parser->symbols.data[i].val.ext;
+    }
+	return NULL;
+}
+
 Variable get_var(Location loc, Parser *parser, String_View name) {
     for(size_t i = 0; i < parser->symbols.count; i++) {
         if(parser->symbols.data[i].type == SYMBOL_VAR && view_cmp(parser->symbols.data[i].val.var.name, name)) return parser->symbols.data[i].val.var;
@@ -608,6 +616,15 @@ Function *get_function(Location loc, Functions *functions, String_View name) {
 		if(view_cmp(functions->data[i].name, name)) return &functions->data[i];	
 	}
 	PRINT_ERROR(loc, "Unknown function: "View_Print"\n", View_Arg(name));
+}
+
+Ext_Func_Call parse_ext_func_call(Parser *parser, Ext_Func *func) {
+	Ext_Func_Call ext = {0};
+	for(size_t i = 0; i < func->args.count; i++) {
+		ADA_APPEND(parser->arena, &ext.args, parse_expr(parser));
+		if(i != func->args.count-1) expect_token(parser->tokens, TT_COMMA);
+	}	
+	return ext;
 }
 
 Expr *parse_primary(Parser *parser) {
@@ -675,8 +692,14 @@ Expr *parse_primary(Parser *parser) {
                 PRINT_ERROR(token.loc, "expected `)`");   
             }
             break;
-        case TT_IDENT:
-            if(token_peek(tokens, 0).type == TT_O_PAREN) {
+        case TT_IDENT: {
+			expr->loc = token.loc;
+			Ext_Func *ext_func = get_ext_func(parser, token.value.ident);
+			if(ext_func != NULL) {
+				expr->type = EXPR_EXT;
+				expr->value.ext = parse_ext_func_call(parser, ext_func);
+				expr->value.ext.name = token.value.ident;
+            } else if(token_peek(tokens, 0).type == TT_O_PAREN) {
                 *expr = (Expr){
                     .type = EXPR_FUNCALL,
                     .value.func_call.name = token.value.ident,
@@ -732,7 +755,7 @@ Expr *parse_primary(Parser *parser) {
 				Variable var = get_var(expr->loc, parser, expr->value.variable);
 				expr->data_type = var.type;
             }
-            break;
+        } break;
         default:
             ASSERT(false, "unexpected token");
     }

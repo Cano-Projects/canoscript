@@ -10,6 +10,12 @@ typedef struct {
 	size_t count;	
 	size_t capacity;
 } Labels;
+	
+typedef struct {
+	String_View *data;
+	size_t count;
+	size_t capacity;
+} Ext_Numbers;
 
 typedef struct {
     Variables vars;
@@ -23,6 +29,7 @@ typedef struct {
     Nodes structs;
 	Program program;
 	Labels labels;
+	Ext_Numbers exts;	
 	Machine machine;
 } Program_State;
     

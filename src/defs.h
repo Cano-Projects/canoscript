@@ -141,6 +141,11 @@ typedef struct {
 	Data_Types args;
 	Type_Type return_type;
 } Ext_Func;
+	
+typedef struct {
+	String_View name;
+	Exprs args;
+} Ext_Func_Call;
     
 typedef struct {
     Builtin_Type type;
@@ -180,6 +185,7 @@ typedef enum {
     EXPR_FIELD,
 	EXPR_FIELD_ARR,
     EXPR_BUILTIN,
+	EXPR_EXT,
     EXPR_COUNT,
 } Expr_Type;
 	
@@ -209,6 +215,7 @@ typedef union {
     String_View variable;
     String_View string;
     Func_Call func_call;
+	Ext_Func_Call ext;
     Builtin builtin;
 } Expr_Value;
 
@@ -459,7 +466,7 @@ typedef union {
 	Function function;
 	Variable var;
 	Struct structure;
-	String_View ext;
+	Ext_Func ext;
 } Symbol_Value;
 	
 typedef enum {

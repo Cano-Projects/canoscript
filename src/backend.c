@@ -29,6 +29,11 @@ void gen_push(Program_State *state, int value) {
 	DA_APPEND(&state->machine.instructions, inst);
     state->stack_s++;   
 }
+	
+void gen_native(Program_State *state, int value) {
+	Inst inst = create_inst(INST_NATIVE, (Word){.as_int=value}, INT_TYPE);
+	DA_APPEND(&state->machine.instructions, inst);
+}
     
 void gen_push_float(Program_State *state, double value) {
 	Inst inst = create_inst(INST_PUSH, (Word){.as_float=value}, FLOAT_TYPE);
@@ -360,6 +365,7 @@ void gen_builtin(Program_State *state, Expr *expr) {
         case BUILTIN_DLL: {
 			gen_push_str(state, expr->value.builtin.ext_func.file_name);
 			gen_push_str(state, expr->value.builtin.ext_func.name);				
+			DA_APPEND(&state->exts, expr->value.builtin.ext_func.name);
 			Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
 			DA_APPEND(&state->machine.instructions, inst);
             state->stack_s -= 2;
@@ -484,6 +490,20 @@ void gen_expr(Program_State *state, Expr *expr) {
             gen_struct_field_offset(state, structure, var_name);
             gen_read(state);            
         } break;
+		case EXPR_EXT: {
+			String_View name = expr->value.ext.name;
+			for(size_t i = 0; i < expr->value.ext.args.count; i++) {
+				gen_expr(state, expr->value.ext.args.data[i]);
+			}
+			for(size_t i = 0; i < state->exts.count; i++) {
+				if(view_cmp(state->exts.data[i], name)) {
+					gen_native(state, i+2);
+					state->stack_s -= expr->value.ext.args.count;
+					break;
+				}
+			}
+			//ASSERT(false, "something went wrong with the external function "View_Print"'s args", View_Arg(name));
+		} break;
         case EXPR_BUILTIN: {
             gen_builtin(state, expr);   
         } break;
