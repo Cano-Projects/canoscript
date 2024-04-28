@@ -87,7 +87,6 @@ typedef struct {
     char *filename;
 } Location;
 
-
 typedef enum {
     OP_PLUS,
     OP_MINUS,

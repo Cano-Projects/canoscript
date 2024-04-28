@@ -621,7 +621,12 @@ Function *get_function(Location loc, Functions *functions, String_View name) {
 Ext_Func_Call parse_ext_func_call(Parser *parser, Ext_Func *func) {
 	Ext_Func_Call ext = {0};
 	for(size_t i = 0; i < func->args.count; i++) {
-		ADA_APPEND(parser->arena, &ext.args, parse_expr(parser));
+		Expr *expr = parse_expr(parser);
+		if(expr->data_type != func->args.data[i] && expr->data_type != TYPE_STR && func->args.data[i] != TYPE_STR) {
+			PRINT_ERROR(expr->loc, "expected type `%s` but found type `%s`", 
+						data_types[func->args.data[i]].data, data_types[expr->type].data);
+		}
+		ADA_APPEND(parser->arena, &ext.args, expr);
 		if(i != func->args.count-1) expect_token(parser->tokens, TT_COMMA);
 	}	
 	return ext;
@@ -699,6 +704,7 @@ Expr *parse_primary(Parser *parser) {
 				expr->type = EXPR_EXT;
 				expr->value.ext = parse_ext_func_call(parser, ext_func);
 				expr->value.ext.name = token.value.ident;
+				expr->data_type = ext_func->return_type;
             } else if(token_peek(tokens, 0).type == TT_O_PAREN) {
                 *expr = (Expr){
                     .type = EXPR_FUNCALL,
@@ -1017,7 +1023,12 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                 } else {
 					int i = parse_reassign_left(&parser, &node);
 					if(node.type == TYPE_VAR_REASSIGN) {
-	                    ADA_APPEND(arena, &node.value.var.value, parse_expr(&parser));
+						Expr *expr = parse_expr(&parser);
+						if(expr->data_type != node.value.var.type) {
+							PRINT_ERROR(expr->loc, "expected type `%s` but found type `%s`",
+										data_types[node.value.var.type].data, data_types[expr->data_type].data);
+						}
+	                    ADA_APPEND(arena, &node.value.var.value, expr);
 	                } else if(node.type == TYPE_FIELD_REASSIGN) {
 						node.value.field.var_name = token_consume(&tokens).value.ident; // consume ident
 	                    expect_token(&tokens, TT_EQ);
