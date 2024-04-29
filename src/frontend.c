@@ -706,6 +706,7 @@ Expr *parse_primary(Parser *parser) {
 				expr->value.ext = parse_ext_func_call(parser, ext_func);
 				expr->value.ext.name = token.value.ident;
 				expr->data_type = ext_func->return_type;
+				expr->return_type = ext_func->return_type;
             } else if(token_peek(tokens, 0).type == TT_O_PAREN) {
                 *expr = (Expr){
                     .type = EXPR_FUNCALL,
@@ -1075,7 +1076,12 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 							ASSERT(false, "unimplemented");
 						}
 	                } else {
-	                    PRINT_ERROR(token.loc, "unexpected token `%s`\n", token_types[token.type]);
+		                node.type = TYPE_EXPR_STMT;
+		                node.value.expr_stmt = parse_expr(&parser);
+						if(node.value.expr_stmt->value.builtin.type == BUILTIN_DLL) ADA_APPEND(arena, &parser.ext_nodes, node);
+						else ADA_APPEND(arena, &root, node);
+						break;
+	                    //PRINT_ERROR(token.loc, "unexpected token `%s`", token_types[token.type]);
 	                }
 	                ADA_APPEND(arena, &root, node);                
 				}

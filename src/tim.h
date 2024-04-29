@@ -766,7 +766,7 @@ void machine_free(Machine *machine) {
 } 
 
 void machine_load_native(Machine *machine, native ptr) {
-	ASSERT(ptr != NULL, "function pointer cannot be null");
+	ASSERT(ptr != NULL, "function pointer cannot be null: %s", dlerror());
 	machine->native_ptrs[machine->native_ptrs_s++] = ptr;	
 }
 
@@ -799,6 +799,7 @@ void run_instructions(Machine *machine) {
                 for(size_t i = 0; i < str.len; i++) {
                     machine->memory->cell.data[i] = str.data[i];
                 }
+				machine->memory->cell.data[str.len] = '\0';
                 Word word;
                 word.as_pointer = machine->memory->cell.data;
                 push(machine, word, PTR_TYPE);
