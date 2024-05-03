@@ -1186,6 +1186,9 @@ void run_instructions(Machine *machine) {
                 assert(false);
         }
     }
+	for(size_t i = 2; i < machine->native_ptrs_s; i++) {
+		dlclose(machine->native_ptrs);
+	}
 }
 
 #endif // TIM_IMPLEMENTATION

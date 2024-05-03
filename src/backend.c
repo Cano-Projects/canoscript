@@ -347,13 +347,12 @@ Type_Type get_variable_type(Program_State *state, String_View name) {
 	
 Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc) {
 	char *output_name = malloc(sizeof(char)*256);
-	sprintf(output_name, View_Print".so", View_Arg(func.file_name));
+	sprintf(output_name, View_Print".c", View_Arg(func.file_name));
 	(void)state;
-	// TODO: make this use the original file_name with native_ prepended
 	FILE *file = fopen(output_name, "w");
 	if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
 	fprintf(file, "#include <stdio.h>\n");
-	fprintf(file, "#include \"../src/tim.h\"\n");
+	fprintf(file, "#include <tim.h>\n");
 	fprintf(file, "%s native_"View_Print"(Machine *machine) {\n", data_typess[func.return_type], View_Arg(func.name));
 	for(size_t i = 0; i < func.args.count; i++) {
 		fprintf(file, "\tData %c = pop(machine);\n", (char)i+'a');
@@ -374,7 +373,7 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 	char *func_name = malloc(sizeof(char)*128);
 	sprintf(func_name, "native_"View_Print, View_Arg(func.name));
 	Ext_Func new_func = {
-		.file_name = {output_name, func.file_name.len+sizeof(".so")-1},
+		.file_name = {output_name, func.file_name.len+sizeof(".c")-1},
 		.name = {func_name, func.name.len+sizeof("native_")-1},
 	};
 	return new_func;
