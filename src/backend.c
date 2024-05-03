@@ -346,32 +346,36 @@ Type_Type get_variable_type(Program_State *state, String_View name) {
 }
 	
 Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc) {
+	char *output_name = malloc(sizeof(char)*256);
+	sprintf(output_name, View_Print".so", View_Arg(func.file_name));
 	(void)state;
 	// TODO: make this use the original file_name with native_ prepended
-	FILE *file = fopen("new.c", "w");
+	FILE *file = fopen(output_name, "w");
 	if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
 	fprintf(file, "#include <stdio.h>\n");
 	fprintf(file, "#include \"../src/tim.h\"\n");
 	fprintf(file, "%s native_"View_Print"(Machine *machine) {\n", data_typess[func.return_type], View_Arg(func.name));
 	for(size_t i = 0; i < func.args.count; i++) {
-		fprintf(file, "Data %c = pop(machine);\n", (char)i+'a');
-		fprintf(file, "if(%c.type != %s_TYPE) {\n", (char)i+'a', data_typesss[func.args.data[i]]);		
-		fprintf(file, "fprintf(stderr, \"expected type %s\");\n", data_typess[func.args.data[i]]);
-		fprintf(file, "exit(1);\n");
-		fprintf(file, "}\n");
+		fprintf(file, "\tData %c = pop(machine);\n", (char)i+'a');
+		fprintf(file, "\tif(%c.type != %s_TYPE) {\n", (char)i+'a', data_typesss[func.args.data[i]]);		
+		fprintf(file, "\t\tfprintf(stderr, \"expected type %s\");\n", data_typess[func.args.data[i]]);
+		fprintf(file, "\t\texit(1);\n");
+		fprintf(file, "\t}\n");
 	}
-	fprintf(file, "%s result = "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
+	fprintf(file, "\t%s result = "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
 	for(size_t i = 0; i < func.args.count; i++) {
 		fprintf(file, "%c.word.as_%s", (char)i+'a', data_typess[func.args.data[i]]);
 		if(i != func.args.count-1) fprintf(file, ", ");		
 	}
 	fprintf(file, ");\n");
-	fprintf(file, "push(machine, (Word){.as_%s=result}, %s_TYPE);\n", 
+	fprintf(file, "\tpush(machine, (Word){.as_%s=result}, %s_TYPE);\n", 
 					data_typess[func.return_type], data_typesss[func.return_type]);
 	fprintf(file, "}\n");
+	char *func_name = malloc(sizeof(char)*128);
+	sprintf(func_name, "native_"View_Print, View_Arg(func.name));
 	Ext_Func new_func = {
-		.file_name = {"new.c"},
-		.name = {"native_add_ten"},
+		.file_name = {output_name, func.file_name.len+sizeof(".so")-1},
+		.name = {func_name, func.name.len+sizeof("native_")-1},
 	};
 	return new_func;
 }
@@ -414,13 +418,14 @@ void gen_builtin(Program_State *state, Expr *expr) {
         case BUILTIN_DLL: {
 			Ext_Func new_func = gen_ext_func_wrapper(state, expr->value.builtin.ext_func, expr->loc);
 			char command[1024] = {0};
-			printf("this: "View_Print"\n", View_Arg(new_func.file_name));
 			sprintf(command, "gcc -fPIC -shared "View_Print" -o "View_Print".so "View_Print"", 
-				View_Arg(expr->value.builtin.ext_func.file_name), View_Arg(new_func.file_name), View_Arg(new_func.file_name));
-			printf("%s\n", command);
+				View_Arg(expr->value.builtin.ext_func.file_name),
+				View_Arg(new_func.file_name), View_Arg(new_func.file_name));
+			char *output = malloc(sizeof(char)*128);
+			sprintf(output, View_Print".so", View_Arg(new_func.file_name));
 			system(command);
-			gen_push_str(state, new_func.file_name);
-			gen_push_str(state, new_func.name);				
+			gen_push_str(state, (String_View){output, strlen(output)});				
+			gen_push_str(state, new_func.name);					
 			Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
 			DA_APPEND(&state->machine.instructions, inst);
             state->stack_s -= 2;
