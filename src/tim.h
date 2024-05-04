@@ -795,7 +795,7 @@ void run_instructions(Machine *machine) {
             case INST_PUSH_STR: {
                 size_t index = machine->instructions.data[ip].value.as_int;
                 String_View str = machine->str_stack.data[index];
-                insert_memory(machine, str.len);
+                insert_memory(machine, str.len+1);
                 for(size_t i = 0; i < str.len; i++) {
                     machine->memory->cell.data[i] = str.data[i];
                 }

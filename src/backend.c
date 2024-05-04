@@ -353,6 +353,15 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 	if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
 	fprintf(file, "#include <stdio.h>\n");
 	fprintf(file, "#include <tim.h>\n");
+	
+	fprintf(file, "%s "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
+	
+	for(size_t i = 0; i < func.args.count; i++) {
+		fprintf(file, "%s %c", data_typess[func.args.data[i]], (char)i+'a');
+		if(i != func.args.count-1) fprintf(file, ", ");
+	}
+	fprintf(file, ");\n");
+	
 	fprintf(file, "%s native_"View_Print"(Machine *machine) {\n", data_typess[func.return_type], View_Arg(func.name));
 	for(size_t i = 0; i < func.args.count; i++) {
 		fprintf(file, "\tData %c = pop(machine);\n", (char)i+'a');
@@ -420,6 +429,7 @@ void gen_builtin(Program_State *state, Expr *expr) {
 			sprintf(command, "gcc -fPIC -shared "View_Print" -o "View_Print".so "View_Print"", 
 				View_Arg(expr->value.builtin.ext_func.file_name),
 				View_Arg(new_func.file_name), View_Arg(new_func.file_name));
+				printf("%s\n", command);
 			char *output = malloc(sizeof(char)*128);
 			sprintf(output, View_Print".so", View_Arg(new_func.file_name));
 			system(command);
