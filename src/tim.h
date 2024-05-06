@@ -1177,6 +1177,7 @@ void run_instructions(Machine *machine) {
 				void *lib = dlopen(lib_name, RTLD_LAZY);
 				if(!lib) {
 					fprintf(stderr, "%s\n", dlerror());
+					exit(1);
 				}
 				native func;
 				*(void**)(&func) = dlsym(lib, func_name);				

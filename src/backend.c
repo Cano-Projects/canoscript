@@ -1,4 +1,5 @@
 #include "backend.h"
+#include <errno.h>
 
 char *node_types[TYPE_COUNT] = {"root", "native", "expr", "var_dec", "var_reassign",
                                 "if", "else", "while", "then", "func_dec", "func_call", "return", "end"};
@@ -352,6 +353,7 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 	FILE *file = fopen(output_name, "w");
 	if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
 	fprintf(file, "#include <stdio.h>\n");
+	fprintf(file, "#define TIM_IMPLEMENTATION\n");	
 	fprintf(file, "#include <tim.h>\n");
 	
 	fprintf(file, "%s "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
@@ -362,7 +364,7 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 	}
 	fprintf(file, ");\n");
 	
-	fprintf(file, "%s native_"View_Print"(Machine *machine) {\n", data_typess[func.return_type], View_Arg(func.name));
+	fprintf(file, "void native_"View_Print"(Machine *machine) {\n", View_Arg(func.name));
 	for(size_t i = 0; i < func.args.count; i++) {
 		fprintf(file, "\tData %c = pop(machine);\n", (char)i+'a');
 		fprintf(file, "\tif(%c.type != %s_TYPE) {\n", (char)i+'a', data_typesss[func.args.data[i]]);		
@@ -425,16 +427,27 @@ void gen_builtin(Program_State *state, Expr *expr) {
         } break;
         case BUILTIN_DLL: {
 			Ext_Func new_func = gen_ext_func_wrapper(state, expr->value.builtin.ext_func, expr->loc);
-			char command[1024] = {0};
-			sprintf(command, "gcc -fPIC -shared "View_Print" -o "View_Print".so "View_Print"", 
-				View_Arg(expr->value.builtin.ext_func.file_name),
-				View_Arg(new_func.file_name), View_Arg(new_func.file_name));
-				printf("%s\n", command);
 			char *output = malloc(sizeof(char)*128);
 			sprintf(output, View_Print".so", View_Arg(new_func.file_name));
-			system(command);
+			
+			char command[1024] = {0};
+			sprintf(command, "gcc -Wall -Wextra -Werror -fPIC -shared -o %s "View_Print" "View_Print, 
+				output,
+				View_Arg(new_func.file_name),
+				View_Arg(expr->value.builtin.ext_func.file_name));
+			printf("output: %s\ncommand: %s\n", output, command);
+				
+			if(system(command) != 0) {
+				printf("Command failed!\n");
+				exit(1);
+			}
+			char path[1024] = {0};
+			getcwd(path, sizeof(path));
+			printf("%s\n", path);
+			
 			gen_push_str(state, (String_View){output, strlen(output)});				
 			gen_push_str(state, new_func.name);					
+			printf(View_Print"\n", View_Arg(new_func.name));
 			Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
 			DA_APPEND(&state->machine.instructions, inst);
             state->stack_s -= 2;
