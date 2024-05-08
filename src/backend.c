@@ -387,6 +387,7 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 		.file_name = {output_name, func.file_name.len+sizeof(".c")-1},
 		.name = {func_name, func.name.len+sizeof("native_")-1},
 	};
+	fclose(file);
 	return new_func;
 }
     
