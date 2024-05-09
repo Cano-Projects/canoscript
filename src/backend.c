@@ -350,12 +350,18 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 	char *output_name = malloc(sizeof(char)*256);
 	sprintf(output_name, View_Print".c", View_Arg(func.file_name));
 	(void)state;
-	FILE *file = fopen(output_name, "w");
-	if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
-	fprintf(file, "#include <stdio.h>\n");
-	fprintf(file, "#define TIM_IMPLEMENTATION\n");	
-	fprintf(file, "#include <tim.h>\n");
-	
+	FILE *file;
+	if(access(output_name, F_OK) == 0) {
+		file = fopen(output_name, "a");		
+		if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
+		fprintf(file, "\n");
+	} else {
+		file = fopen(output_name, "w");		
+		if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
+		fprintf(file, "#include <stdio.h>\n");
+		fprintf(file, "#define TIM_IMPLEMENTATION\n");	
+		fprintf(file, "#include <tim.h>\n");
+	}
 	fprintf(file, "%s "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
 	
 	for(size_t i = 0; i < func.args.count; i++) {
@@ -436,19 +442,13 @@ void gen_builtin(Program_State *state, Expr *expr) {
 				output,
 				View_Arg(new_func.file_name),
 				View_Arg(expr->value.builtin.ext_func.file_name));
-			printf("output: %s\ncommand: %s\n", output, command);
-				
 			if(system(command) != 0) {
 				printf("Command failed!\n");
 				exit(1);
 			}
-			char path[1024] = {0};
-			getcwd(path, sizeof(path));
-			printf("%s\n", path);
 			
 			gen_push_str(state, (String_View){output, strlen(output)});				
 			gen_push_str(state, new_func.name);					
-			printf(View_Print"\n", View_Arg(new_func.name));
 			Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
 			DA_APPEND(&state->machine.instructions, inst);
             state->stack_s -= 2;
@@ -854,7 +854,17 @@ void generate(Program_State *state, Program *program) {
 	for(size_t i = 0; i < program->ext_nodes.count; i++) {
 		gen_builtin(state, program->ext_nodes.data[i].value.expr_stmt);
 	}
+
 	gen_vars(state, program);
     gen_program(state, program->nodes);
 	gen_label_arr(state);	
+
+	for(size_t i = 0; i < program->ext_nodes.count; i++) {
+		char *output = malloc(sizeof(char)*128);
+		sprintf(output, View_Print".c", View_Arg(program->ext_nodes.data[i].value.expr_stmt->value.builtin.ext_func.file_name));
+		if(access(output, F_OK) == 0) {
+			ASSERT(remove(output) == 0, "Could not remove the native file %s: %s", output, strerror(errno));
+		}
+		free(output);
+	}
 }
