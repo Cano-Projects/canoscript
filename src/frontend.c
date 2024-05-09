@@ -534,7 +534,11 @@ Ext_Func parse_external_func_dec(Parser *parser) {
 	token = expect_token(tokens, TT_O_PAREN);
 	// exit condition defined in loop
 	while(true) {
-		token = expect_token(tokens, TT_TYPE);
+		token = token_consume(tokens);
+		if(token.type == TT_C_PAREN) break;
+		else if(token.type != TT_TYPE) {
+			PRINT_ERROR(token.loc, "expected type `type` but found %s\n", token_types[token.type]);
+		}
 		ADA_APPEND(arena, &ext_func.args, token.value.type);
 		token = token_consume(tokens);
 		if(token.type == TT_C_PAREN) break;

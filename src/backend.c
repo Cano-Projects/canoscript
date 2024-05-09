@@ -7,7 +7,7 @@ char *node_types[TYPE_COUNT] = {"root", "native", "expr", "var_dec", "var_reassi
 char *data_typess[DATA_COUNT] = {
     "int",
     "pointer", 
-    "this_is_wrong",
+    "void",
     "char",                    
     "float",            
     "pointer"                
@@ -16,7 +16,7 @@ char *data_typess[DATA_COUNT] = {
 char *data_typesss[DATA_COUNT] = {
     "INT",
     "PTR", 
-    "this_is_wrong",
+    "THIS_IS_WRONG",
     "CHAR",                    
     "FLOAT",            
     "PTR"                
@@ -347,9 +347,9 @@ Type_Type get_variable_type(Program_State *state, String_View name) {
 }
 	
 Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc) {
+	(void)state;
 	char *output_name = malloc(sizeof(char)*256);
 	sprintf(output_name, View_Print".c", View_Arg(func.file_name));
-	(void)state;
 	FILE *file;
 	if(access(output_name, F_OK) == 0) {
 		file = fopen(output_name, "a");		
@@ -362,30 +362,34 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 		fprintf(file, "#define TIM_IMPLEMENTATION\n");	
 		fprintf(file, "#include <tim.h>\n");
 	}
-	fprintf(file, "%s "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
+	/*fprintf(file, "%s "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
 	
 	for(size_t i = 0; i < func.args.count; i++) {
 		fprintf(file, "%s %c", data_typess[func.args.data[i]], (char)i+'a');
 		if(i != func.args.count-1) fprintf(file, ", ");
 	}
 	fprintf(file, ");\n");
+	*/
 	
 	fprintf(file, "void native_"View_Print"(Machine *machine) {\n", View_Arg(func.name));
-	for(size_t i = 0; i < func.args.count; i++) {
+	for(int i = func.args.count-1; i >= 0; i--) {
 		fprintf(file, "\tData %c = pop(machine);\n", (char)i+'a');
 		fprintf(file, "\tif(%c.type != %s_TYPE) {\n", (char)i+'a', data_typesss[func.args.data[i]]);		
-		fprintf(file, "\t\tfprintf(stderr, \"expected type %s\");\n", data_typess[func.args.data[i]]);
+		fprintf(file, "\t\tfprintf(stderr, \"expected type %s\\n\");\n", data_typess[func.args.data[i]]);
 		fprintf(file, "\t\texit(1);\n");
 		fprintf(file, "\t}\n");
 	}
-	fprintf(file, "\t%s result = "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
+	if(func.return_type == TYPE_VOID) fprintf(file, View_Print"(", View_Arg(func.name));
+	else fprintf(file, "\t%s result = "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
 	for(size_t i = 0; i < func.args.count; i++) {
 		fprintf(file, "%c.word.as_%s", (char)i+'a', data_typess[func.args.data[i]]);
 		if(i != func.args.count-1) fprintf(file, ", ");		
 	}
-	fprintf(file, ");\n");
-	fprintf(file, "\tpush(machine, (Word){.as_%s=result}, %s_TYPE);\n", 
-					data_typess[func.return_type], data_typesss[func.return_type]);
+	fprintf(file, ");\n");	
+	if(func.return_type != TYPE_VOID) {
+		fprintf(file, "\tpush(machine, (Word){.as_%s=result}, %s_TYPE);\n", 
+						data_typess[func.return_type], data_typesss[func.return_type]);
+	}
 	fprintf(file, "}\n");
 	char *func_name = malloc(sizeof(char)*128);
 	sprintf(func_name, "native_"View_Print, View_Arg(func.name));
@@ -438,7 +442,7 @@ void gen_builtin(Program_State *state, Expr *expr) {
 			sprintf(output, View_Print".so", View_Arg(new_func.file_name));
 			
 			char command[1024] = {0};
-			sprintf(command, "gcc -Wall -Wextra -Werror -fPIC -shared -o %s "View_Print" "View_Print, 
+			sprintf(command, "gcc -L. -Wall -Wextra -Werror -Wno-implicit-function-declaration -fPIC -shared -o %s "View_Print" "View_Print, 
 				output,
 				View_Arg(new_func.file_name),
 				View_Arg(expr->value.builtin.ext_func.file_name));
