@@ -31,7 +31,21 @@ char *data_typesss[DATA_COUNT] = {
 	"U32",
     "U64",                	
 };    
-    
+	
+DataType type_to_data[DATA_COUNT] = {
+    INT_TYPE,
+    PTR_TYPE, 
+	0,
+    CHAR_TYPE,                    
+    FLOAT_TYPE,            
+    DOUBLE_TYPE,            
+    PTR_TYPE,
+    U8_TYPE,
+    U16_TYPE,
+	U32_TYPE,
+	U64_TYPE,                	
+};    
+
 size_t data_type_s[DATA_COUNT] = {8, 1, 1, 1, 4, 8, 8, 1, 2, 4, 8};
 
 Node get_struct(Nodes structs, String_View name) {
@@ -55,6 +69,12 @@ Inst create_inst(Inst_Set type, Word value, DataType d_type) {
 // TODO: add ASSERTs to all "popping" functions
 void gen_push(Program_State *state, int value) {
 	Inst inst = create_inst(INST_PUSH, (Word){.as_int=value}, INT_TYPE);
+	DA_APPEND(&state->machine.instructions, inst);
+    state->stack_s++;   
+}
+	
+void gen_push_u(Program_State *state, uint64_t value, DataType type) {
+	Inst inst = create_inst(INST_PUSH, (Word){.as_u64=value}, type);
 	DA_APPEND(&state->machine.instructions, inst);
     state->stack_s++;   
 }
@@ -373,6 +393,10 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 		fprintf(file, "#include <tim.h>\n");
 	}
 	fprintf(file, "typedef void* pointer;\n");			
+	fprintf(file, "typedef uint8_t u8;\n");					
+	fprintf(file, "typedef uint16_t u16;\n");				
+	fprintf(file, "typedef uint32_t u32;\n");				
+	fprintf(file, "typedef uint64_t u64;\n");					
 	
 	fprintf(file, "void native_"View_Print"(Machine *machine) {\n", View_Arg(func.name));
 	for(int i = func.args.count-1; i >= 0; i--) {
@@ -507,7 +531,19 @@ void gen_expr(Program_State *state, Expr *expr) {
             state->stack_s--;
             break;
         case EXPR_INT:
-            gen_push(state, expr->value.integer);        
+			switch(expr->data_type) {
+				case TYPE_INT:
+		            gen_push(state, expr->value.integer);        			
+					break;
+				case TYPE_U8:
+				case TYPE_U16:
+				case TYPE_U32:
+				case TYPE_U64:
+		            gen_push_u(state, expr->value.integer, type_to_data[expr->data_type]);        						
+					break;
+				default:
+					ASSERT(false, "unreachable");
+			}
             break;
         case EXPR_FLOAT:
             gen_push_float(state, expr->value.floating);        

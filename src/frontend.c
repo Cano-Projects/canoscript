@@ -1033,6 +1033,7 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 													//node.value.var.type != TYPE_STR) {
 							PRINT_ERROR(node.loc, "expression does match the type of the var "View_Print, View_Arg(node.value.var.name));
 						}
+						node.value.var.value.data[0]->data_type = node.value.var.type;
                     }
 					if(is_in_function(block_stack)) {
 						ASSERT(functions.count > 0, "Block stack got messed up frfr");
