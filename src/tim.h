@@ -75,7 +75,12 @@ typedef enum {
 
 typedef enum {
     INT_TYPE = 0,
+    U8_TYPE,	
+    U16_TYPE,	
+    U32_TYPE,		
+    U64_TYPE,			
     FLOAT_TYPE,
+	DOUBLE_TYPE,
     CHAR_TYPE,
     PTR_TYPE,
     REGISTER_TYPE,
@@ -84,7 +89,12 @@ typedef enum {
     
 typedef union {
     int64_t as_int;
-    double as_float;
+	uint8_t as_u8;
+	uint16_t as_u16;
+	uint32_t as_u32;
+	uint64_t as_u64;
+    float as_float;
+	double as_double;
     char as_char;
     void *as_pointer;
 } Word;
@@ -458,7 +468,7 @@ char *open_modes[MODES_LENGTH] = {"r", "w", "wr", "a", "rb", "wb", "ab"};
 void native_open(Machine *machine){
     Word flag_mode = pop(machine).word;
     if(flag_mode.as_int > MODES_LENGTH - 1){
-        fprintf(stderr, "error: mode %" PRId64 "out of bounds\n", flag_mode.as_int);
+        fprintf(stderr, "error: mode %ld out of bounds\n", flag_mode.as_int);
         exit(1);
     }
     Word path = pop(machine).word;
@@ -585,7 +595,7 @@ void index_dup(Machine *machine, int64_t index){
 void print_stack(Machine *machine){
     printf("------ STACK\n");
     for(int i = machine->stack_size - 1; i >= 0; i--){
-        printf("as int: %" PRId64 ", as float: %f, as char: %c, as pointer: %p\n", machine->stack[i].word.as_int, 
+        printf("as int: %ld, as float: %f, as char: %c, as pointer: %p\n", machine->stack[i].word.as_int, 
                machine->stack[i].word.as_float, machine->stack[i].word.as_char, machine->stack[i].word.as_pointer);
     }
     printf("------ END OF STACK\n");
@@ -723,7 +733,7 @@ void machine_disasm(Machine *machine) {
 			putc(' ', stdout);
 			switch(machine->instructions.data[i].data_type) {
 				case INT_TYPE: {
-					uint64_t value = machine->instructions.data[i].value.as_int;				
+					int64_t value = machine->instructions.data[i].value.as_int;				
 					if(machine->instructions.data[i].type == INST_PUSH_STR) {
 						String_View string = machine->str_stack.data[value];
 						putc('"', stdout);
@@ -969,20 +979,29 @@ void run_instructions(Machine *machine) {
                 a = machine->stack[machine->stack_size - 1];
                 b = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
-                int result = (int)a.type;
+                DataType result = a.type;
                 switch(result){
-                    case 0:
-                        CMP_AS_TYPE(as_int, ==);
+                    case INT_TYPE:
+						CMP_AS_TYPE(as_int, ==);
                         break;
-                    case 1:
-                        CMP_AS_TYPE(as_float, ==);
+                    case U8_TYPE:
+                    case U16_TYPE:			
+                    case U32_TYPE:						
+                    case U64_TYPE:									
+						CMP_AS_TYPE(as_u64, ==);
                         break;
-                    case 2:
+                    case FLOAT_TYPE:			
+                    case DOUBLE_TYPE:
+                        CMP_AS_TYPE(as_double, ==);
+                        break;
+                    case CHAR_TYPE:
                         CMP_AS_TYPE(as_char, ==);
                         break;
-                    case 3:
+                    case PTR_TYPE:
                         CMP_AS_TYPE(as_pointer, ==);
                         break;
+					default:
+						ASSERT(false, "out of reach");
                 }
                 break;
             }
@@ -1156,7 +1175,7 @@ void run_instructions(Machine *machine) {
                 break;
             case INST_PRINT:
                 a = pop(machine);
-                printf("as float: %f, as int: %" PRId64 ", as char: %c, as pointer: %p, type: %s\n",
+                printf("as float: %f, as int: %ld, as char: %c, as pointer: %p, type: %s\n",
                         a.word.as_float, a.word.as_int, a.word.as_char, a.word.as_pointer, str_types[a.type]);
                 break;
             case INST_SS:

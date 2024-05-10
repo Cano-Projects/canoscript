@@ -10,7 +10,12 @@ char *data_typess[DATA_COUNT] = {
     "void",
     "char",                    
     "float",            
+    "double",            
     "pointer"                
+    "u8",
+	"u16",                	
+    "u32",                	
+    "u64",                		
 };    
 	
 char *data_typesss[DATA_COUNT] = {
@@ -19,10 +24,15 @@ char *data_typesss[DATA_COUNT] = {
     "THIS_IS_WRONG",
     "CHAR",                    
     "FLOAT",            
-    "PTR"                
+    "DOUBLE",            
+    "PTR",
+    "U8",
+    "U16",
+	"U32",
+    "U64",                	
 };    
     
-size_t data_type_s[DATA_COUNT] = {8, 1, 1, 1, 8, 8};
+size_t data_type_s[DATA_COUNT] = {8, 1, 1, 1, 4, 8, 8, 1, 2, 4, 8};
 
 Node get_struct(Nodes structs, String_View name) {
     for(size_t i = 0; i < structs.count; i++) {
@@ -368,7 +378,8 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 	for(int i = func.args.count-1; i >= 0; i--) {
 		fprintf(file, "\tData %c = pop(machine);\n", (char)i+'a');
 		fprintf(file, "\tif(%c.type != %s_TYPE) {\n", (char)i+'a', data_typesss[func.args.data[i]]);		
-		fprintf(file, "\t\tfprintf(stderr, \"expected type %s\\n\");\n", data_typess[func.args.data[i]]);
+		fprintf(file, "\t\tfprintf(stderr, \"expected type %%d but found: %%d\\n\", %s_TYPE, %c.type);\n", 
+					data_typesss[func.args.data[i]], (char)i+'a');
 		fprintf(file, "\t\texit(1);\n");
 		fprintf(file, "\t}\n");
 	}

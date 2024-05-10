@@ -14,7 +14,12 @@ String_View data_types[DATA_COUNT] = {
     {.data="void", .len=4},        
     {.data="char", .len=4},                    
     {.data="float", .len=5},            
+    {.data="double", .len=6},                		
     {.data="ptr", .len=3},                
+    {.data="u8", .len=2},                		
+    {.data="u16", .len=3},                	
+    {.data="u32", .len=3},                
+    {.data="u64", .len=3},                
 };    
 
 bool is_valid_escape(char c){
@@ -88,6 +93,14 @@ String_View read_file_to_view(Arena *arena, char *filename) {
     
 bool isword(char c) {
     return isalpha(c) || isdigit(c) || c == '_';
+}
+
+bool is_valid_types(Type_Type type1, Type_Type type2) {
+	if(type1 == type2 || type1 == TYPE_STR || type2 == TYPE_STR
+		|| ((type1 == TYPE_INT || type1 >= TYPE_U8) && (type2 == TYPE_INT || type2 >= TYPE_U8))) {
+		return true;
+	}
+	return false;
 }
 	
 typedef struct {
@@ -626,7 +639,7 @@ Ext_Func_Call parse_ext_func_call(Parser *parser, Ext_Func *func) {
 	Ext_Func_Call ext = {0};
 	for(size_t i = 0; i < func->args.count; i++) {
 		Expr *expr = parse_expr(parser);
-		if(expr->data_type != func->args.data[i] && expr->data_type != TYPE_STR && func->args.data[i] != TYPE_STR) {
+		if(!is_valid_types(expr->data_type, func->args.data[i])) {
 			PRINT_ERROR(expr->loc, "expected type `%s` but found type `%s`", 
 						data_types[func->args.data[i]].data, data_types[expr->type].data);
 		}
@@ -786,8 +799,9 @@ Expr *parse_expr_1(Parser *parser, Expr *lhs, Precedence min_precedence) {
         if(tokens->count > 0) {
             token_consume(tokens);
             Expr *rhs = parse_primary(parser);
-			if(rhs->data_type != lhs->data_type && rhs->data_type != TYPE_STR && lhs->data_type != TYPE_STR) {
-				PRINT_ERROR(rhs->loc, "expression with types of both %s and %s", data_types[lhs->data_type].data, data_types[rhs->data_type].data);
+			if(!is_valid_types(lhs->data_type, rhs->data_type)) {
+				PRINT_ERROR(rhs->loc, "expression with types of both %s and %s", 
+									  data_types[lhs->data_type].data, data_types[rhs->data_type].data);
 			}
             lookahead = token_peek(tokens, 0);
             while(op_get_prec(lookahead.type) > op.precedence) {
@@ -942,7 +956,7 @@ int parse_reassign_left(Parser *parser, Node *node) {
 					Variable cur_arg = function->args.data[arg_index].value.var;
                     Expr *arg = parse_expr(parser);
                     ADA_APPEND(arena, &node->value.func_call.args, arg);
-					if(arg->data_type != cur_arg.type) {
+					if(!is_valid_types(arg->data_type, cur_arg.type)) {
 						PRINT_ERROR(
 									arg->loc, 
 									"argument "View_Print" expected data type %s but found %s", 
@@ -1014,7 +1028,9 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 						ADA_APPEND(parser.arena, &node.value.var.value, expr);
                     } else {
                         ADA_APPEND(arena, &node.value.var.value, parse_expr(&parser));    
-						if(node.value.var.value.data[0]->data_type != node.value.var.type && node.value.var.type != TYPE_STR) {
+						if(!is_valid_types(node.value.var.value.data[0]->data_type, node.value.var.type)) {
+						//if(node.value.var.value.data[0]->data_type != node.value.var.type && 
+													//node.value.var.type != TYPE_STR) {
 							PRINT_ERROR(node.loc, "expression does match the type of the var "View_Print, View_Arg(node.value.var.name));
 						}
                     }
@@ -1032,7 +1048,7 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 					int i = parse_reassign_left(&parser, &node);
 					if(node.type == TYPE_VAR_REASSIGN) {
 						Expr *expr = parse_expr(&parser);
-						if(expr->data_type != node.value.var.type) {
+						if(!is_valid_types(expr->data_type, node.value.var.type)) {
 							PRINT_ERROR(expr->loc, "expected type `%s` but found type `%s`",
 										data_types[node.value.var.type].data, data_types[expr->data_type].data);
 						}

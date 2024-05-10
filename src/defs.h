@@ -77,7 +77,12 @@ typedef enum {
     TYPE_VOID,
     TYPE_CHAR,
     TYPE_FLOAT,
+	TYPE_DOUBLE,
     TYPE_PTR,
+	TYPE_U8,
+	TYPE_U16,
+	TYPE_U32,
+	TYPE_U64,
     DATA_COUNT,
 } Type_Type;
 
