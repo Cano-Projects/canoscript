@@ -362,14 +362,7 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 		fprintf(file, "#define TIM_IMPLEMENTATION\n");	
 		fprintf(file, "#include <tim.h>\n");
 	}
-	/*fprintf(file, "%s "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
-	
-	for(size_t i = 0; i < func.args.count; i++) {
-		fprintf(file, "%s %c", data_typess[func.args.data[i]], (char)i+'a');
-		if(i != func.args.count-1) fprintf(file, ", ");
-	}
-	fprintf(file, ");\n");
-	*/
+	fprintf(file, "typedef void* pointer;\n");			
 	
 	fprintf(file, "void native_"View_Print"(Machine *machine) {\n", View_Arg(func.name));
 	for(int i = func.args.count-1; i >= 0; i--) {
@@ -442,7 +435,7 @@ void gen_builtin(Program_State *state, Expr *expr) {
 			sprintf(output, View_Print".so", View_Arg(new_func.file_name));
 			
 			char command[1024] = {0};
-			sprintf(command, "gcc -L. -Wall -Wextra -Werror -Wno-implicit-function-declaration -fPIC -shared -o %s "View_Print" "View_Print, 
+			sprintf(command, "gcc -L. -Wall -Wextra -Wno-implicit-function-declaration -fPIC -shared -o %s "View_Print" "View_Print, 
 				output,
 				View_Arg(new_func.file_name),
 				View_Arg(expr->value.builtin.ext_func.file_name));
