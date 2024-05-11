@@ -979,14 +979,20 @@ void run_instructions(Machine *machine) {
                 a = machine->stack[machine->stack_size - 1];
                 b = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
-                DataType result = a.type;
+                DataType result = b.type;
                 switch(result){
                     case INT_TYPE:
 						CMP_AS_TYPE(as_int, ==);
                         break;
                     case U8_TYPE:
+						CMP_AS_TYPE(as_u8, ==);
+                        break;
                     case U16_TYPE:			
+						CMP_AS_TYPE(as_u16, ==);
+                        break;
                     case U32_TYPE:						
+						CMP_AS_TYPE(as_u32, ==);
+                        break;
                     case U64_TYPE:									
 						CMP_AS_TYPE(as_u64, ==);
                         break;
@@ -1009,23 +1015,38 @@ void run_instructions(Machine *machine) {
                 a = machine->stack[machine->stack_size - 1];
                 b = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
-                int result = (int)a.type;
+                DataType result = a.type;
                 switch(result){
-                    case 0:
-                        CMP_AS_TYPE(as_int, !=);
+                    case INT_TYPE:
+						CMP_AS_TYPE(as_int, !=);
                         break;
-                    case 1:
-                        CMP_AS_TYPE(as_float, !=);
+                    case U8_TYPE:
+						CMP_AS_TYPE(as_u8, !=);
                         break;
-                    case 2:
+                    case U16_TYPE:			
+						CMP_AS_TYPE(as_u16, !=);
+                        break;
+                    case U32_TYPE:						
+						CMP_AS_TYPE(as_u32, !=);
+                        break;
+                    case U64_TYPE:									
+						CMP_AS_TYPE(as_u64, !=);
+                        break;
+                    case FLOAT_TYPE:			
+                    case DOUBLE_TYPE:
+                        CMP_AS_TYPE(as_double, !=);
+                        break;
+                    case CHAR_TYPE:
                         CMP_AS_TYPE(as_char, !=);
                         break;
-                    case 3:
+                    case PTR_TYPE:
                         CMP_AS_TYPE(as_pointer, !=);
                         break;
+					default:
+						ASSERT(false, "out of reach");
+                        break;
                 }
-                break;
-            }
+            } break;
             case INST_CMPG: {
                 a = machine->stack[machine->stack_size - 1];
                 b = machine->stack[machine->stack_size - 2];
