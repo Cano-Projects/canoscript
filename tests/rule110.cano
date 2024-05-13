@@ -76,7 +76,11 @@ gen_next(): void
 		new_s = new_s + 1
 	end
 	dealloc data
-	data = new
+	i = 0
+	while i <= data_s then
+		data[i] = new[i]
+		i = i + 1
+	end
 end
 
 
