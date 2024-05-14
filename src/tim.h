@@ -1129,32 +1129,32 @@ void run_instructions(Machine *machine) {
                 push(machine, c, FLOAT_TYPE);
                 break;
             case INST_CMPE: {
-                a = machine->stack[machine->stack_size - 1];
-                b = machine->stack[machine->stack_size - 2];
+                b = machine->stack[machine->stack_size - 1];
+                a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
 				TYPE_OP(as_u8, U8_TYPE, ==);
             } break;
             case INST_CMPNE: {
-                a = machine->stack[machine->stack_size - 1];
-                b = machine->stack[machine->stack_size - 2];
+                b = machine->stack[machine->stack_size - 1];
+                a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
 				TYPE_OP(as_u8, U8_TYPE, !=);
             } break;
             case INST_CMPG: {
-                a = machine->stack[machine->stack_size - 1];
-                b = machine->stack[machine->stack_size - 2];
+                b = machine->stack[machine->stack_size - 1];
+                a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
 				TYPE_OP(as_u8, U8_TYPE, >);
             } break;
             case INST_CMPL: {
-                a = machine->stack[machine->stack_size - 1];
-                b = machine->stack[machine->stack_size - 2];
+                b = machine->stack[machine->stack_size - 1];
+                a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
 				TYPE_OP(as_u8, U8_TYPE, <);
             } break;
             case INST_CMPGE: {
-                a = machine->stack[machine->stack_size - 1];
-                b = machine->stack[machine->stack_size - 2];
+                b = machine->stack[machine->stack_size - 1];
+                a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
 				TYPE_OP(as_u8, U8_TYPE, >=);
             } break;
