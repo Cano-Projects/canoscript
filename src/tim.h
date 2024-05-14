@@ -890,13 +890,10 @@ void run_instructions(Machine *machine) {
                 if(a.type != INT_TYPE) {
                     TIM_ERROR("error: expected int");
                 }
-                if(a.word.as_int < 0) {
-                    TIM_ERROR("error: size cannot be negative");
-                }
-                insert_memory(machine, a.word.as_int);
+				uint64_t val = a.word.as_int;
+                insert_memory(machine, val);
                 Word word;
                 word.as_pointer = machine->memory->cell.data;
-                //push(machine, a.word, INT_TYPE);                
                 push(machine, word, PTR_TYPE);
             } break;
             case INST_DEALLOC: {
@@ -919,8 +916,9 @@ void run_instructions(Machine *machine) {
                 if(ptr_data.type != PTR_TYPE) {
                     TIM_ERROR("error: expected ptr");                    
                 }
+				uint64_t index = size.word.as_int;
                 void *ptr = ptr_data.word.as_pointer;
-                memcpy(ptr, &data.word, size.word.as_int);                
+                memcpy(ptr, &data.word, index);                
             } break;
             case INST_READ: {
                 Data size = pop(machine);
@@ -934,10 +932,11 @@ void run_instructions(Machine *machine) {
                 if(ptr_data.type != PTR_TYPE) {
                     TIM_ERROR("error: expected pointer");
                 }
+				uint64_t index = size.word.as_int;		
                 void *ptr = ptr_data.word.as_pointer;
                 Data data = {0};                
                 data.type = INT_TYPE;
-                memcpy(&data.word, ptr, size.word.as_int);                
+                memcpy(&data.word, ptr, index);                
                 push(machine, data.word, data.type);                
             } break;
             case INST_POP:

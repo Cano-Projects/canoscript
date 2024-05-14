@@ -1,16 +1,11 @@
-data_s: int = 32
-data: int[data_s] = [0]
+data_s: u64 = 32
+data: u8[data_s] = [0]
 data[data_s-1] = 1
 	
-iter: int = 0
-
-struct Pattern {
-	value: int,
-	pattern: str,
-}
+iter: u64 = 0
 
 strcmp(a: str, b: str): int
-    i: int = 0
+    i: u64 = 0
     while a[i] == b[i] then
         if a[i] == '\0' then
             return 1
@@ -21,7 +16,7 @@ strcmp(a: str, b: str): int
 end
 
 print_state(): void
-	i: int = 0
+	i: u64 = 0
 	write "|"
 	while i < data_s then
 		if(data[i] == 0) then
@@ -35,13 +30,13 @@ print_state(): void
 end
 
 gen_next(): void
-	new: ptr = alloc data_s * 8
-	new_s: int = 0
-	i: int = 0
+	new: u8[data_s] = [0]
+	new_s: u64 = 0
+	i: u64 = 0
 	while i < data_s then
-		prev_in: int = (i - 1 + data_s) % data_s
-		cur_in: int = (i + 0 + data_s) % data_s
-		next_in: int = (i + 1 + data_s) % data_s
+		prev_in: u64 = (i - 1 + data_s) % data_s
+		cur_in: u64 = (i + 0 + data_s) % data_s
+		next_in: u64 = (i + 1 + data_s) % data_s
 		cur: str = alloc 4
 		cur[0] = data[prev_in] + 48
 		cur[1] = data[cur_in] + 48
@@ -71,16 +66,12 @@ gen_next(): void
 		if(strcmp("000", cur)) then
 			new[new_s] = 0
 		end
-		
 		i = i + 1
 		new_s = new_s + 1
 	end
 	dealloc data
+	data = new
 	i = 0
-	while i <= data_s then
-		data[i] = new[i]
-		i = i + 1
-	end
 end
 
 
