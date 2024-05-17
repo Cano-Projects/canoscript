@@ -770,7 +770,8 @@ Expr *parse_primary(Parser *parser) {
                 token_consume(tokens); // dot
                 token = token_consume(tokens); // field name
 				size_t i;
-				for(i = 0; view_cmp(structure.values.data[i].value.var.name, token.value.ident); i++);
+				for(i = 0; i+1 < structure.values.count && 
+						view_cmp(structure.values.data[i+1].value.var.name, token.value.ident); i++);
 				expr->data_type = structure.values.data[i].value.var.type;
                 expr->value.field.var_name = token.value.ident;
             } else {
@@ -1031,6 +1032,7 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                         }
                     } else if(node.value.var.is_struct) { 
 						Expr *expr = parse_expr(&parser);
+						node.value.var.type = TYPE_PTR;
 						expr->value.structure.name = node.value.var.name;
 						if(expr->data_type != TYPE_PTR) 
 									PRINT_ERROR(node.loc, 
@@ -1056,10 +1058,12 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                     ADA_APPEND(arena, &parser.symbols, symbol);
 					break;
                 } else {
+					String_View name = token_peek(&tokens, 0).value.ident;
 					int i = parse_reassign_left(&parser, &node);
 					if(node.type == TYPE_VAR_REASSIGN) {
 						Expr *expr = parse_expr(&parser);
-						if(!is_valid_types(expr->data_type, node.value.var.type)) {
+						Variable var = get_var(expr->loc, &parser, node.value.var.name);
+						if(!is_valid_types(expr->data_type, var.type)) {
 							PRINT_ERROR(expr->loc, "expected type `%s` but found type `%s`",
 										data_types[node.value.var.type].data, data_types[expr->data_type].data);
 						}
@@ -1068,6 +1072,15 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 						node.value.field.var_name = token_consume(&tokens).value.ident; // consume ident
 	                    expect_token(&tokens, TT_EQ);
 	                    ADA_APPEND(arena, &node.value.field.value, parse_expr(&parser));
+						Variable struct_var = get_var(node.loc, &parser, name);
+						Struct structure = get_structure(node.loc, &parser, struct_var.struct_name);
+						size_t i;
+						for(i = 0; i+1 < structure.values.count && 
+								view_cmp(structure.values.data[i+1].value.var.name, token.value.ident); i++);
+						if(structure.values.data[i].value.var.is_const) {
+							PRINT_ERROR(node.loc, "field `"View_Print"` is const, cannot reassign",
+															View_Arg(structure.values.data[i].value.var.name));								
+						}
 	                } else if(node.type == TYPE_ARR_INDEX) {
 						Token token = token_peek(&tokens, 0);
 						if(token.type == TT_EQ) {
