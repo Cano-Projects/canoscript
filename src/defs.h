@@ -306,6 +306,7 @@ typedef struct {
     bool is_array;
     bool is_struct;
 	bool global;	
+	bool is_const;
     Expr *array_s;
 } Variable;
     
@@ -470,6 +471,7 @@ typedef enum {
     TT_THEN,
     TT_RET,
     TT_END,
+	TT_CONST,
     TT_COUNT,
 } Token_Type;
 

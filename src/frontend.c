@@ -6,7 +6,7 @@
 char *token_types[TT_COUNT] = {"none", "write", "exit", "builtin", "ident", 
                                ":", "(", ")", "[", "]", "{", "}", ",", ".", "=", "==", "!=", ">=", "<=", ">", "<", "+", "-", "*", "/", "%",
                                "string", "char", "integer", "float", "struct", "void", "type", "if", "else", "while", "then", 
-                               "return", "end"};
+                               "return", "end", "const"};
 
 String_View data_types[DATA_COUNT] = {
     {.data="int", .len=3},
@@ -118,6 +118,7 @@ Keyword keyword_list[] = {
 	{LITERAL_VIEW("then"), TT_THEN},	
 	{LITERAL_VIEW("return"), TT_RET},	
 	{LITERAL_VIEW("end"), TT_END},
+	{LITERAL_VIEW("const"), TT_CONST},		
 	{LITERAL_VIEW("struct"), TT_STRUCT},	
 };
 #define KEYWORDS_COUNT sizeof(keyword_list)/sizeof(*keyword_list)
@@ -865,6 +866,11 @@ Node parse_var_dec(Parser *parser) {
 	token_consume(tokens);
     expect_token(tokens, TT_COLON);
     Token name_t = token_peek(tokens, 0);
+	if(name_t.type == TT_CONST) {
+		node.value.var.is_const = true;
+		token_consume(tokens);
+		name_t = token_peek(tokens, 0);
+	}
     if(name_t.type == TT_TYPE) {
         node.value.var.type = tokens->data[0].value.type;       
     } else if(is_struct(tokens, parser)) {
@@ -916,6 +922,10 @@ int parse_reassign_left(Parser *parser, Node *node) {
         Token name_t = token_consume(tokens);
         token_consume(tokens); // eq
         node->value.var.name = name_t.value.ident;                        
+		Variable var = get_var(name_t.loc, parser, name_t.value.ident);
+		if(var.is_const) {
+			PRINT_ERROR(name_t.loc, "Variable `"View_Print"` is constant", View_Arg(name_t.value.ident));						
+		}
     } else if(token.type == TT_DOT) {
         Token name_t = token_consume(tokens); // ident
         expect_token(tokens, TT_DOT);

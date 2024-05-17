@@ -1,3 +1,0 @@
-a: int = 33
-arr: int[a] = [0]
-exit 1

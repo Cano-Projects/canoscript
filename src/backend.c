@@ -742,6 +742,7 @@ void gen_program(Program_State *state, Nodes nodes) {
 				gen_var_dec(state, node);
             } break;
             case TYPE_VAR_REASSIGN: {
+				ASSERT(!node->value.var.is_const, "const variable cannot be reassigned");
                 gen_expr(state, node->value.var.value.data[0]);
                 int index = get_variable_location(state, node->value.var.name);
                 if(index == -1) {
