@@ -744,13 +744,15 @@ void gen_program(Program_State *state, Nodes nodes) {
             case TYPE_VAR_REASSIGN: {
 				ASSERT(!node->value.var.is_const, "const variable cannot be reassigned");
                 gen_expr(state, node->value.var.value.data[0]);
-                int index = get_variable_location(state, node->value.var.name);
+				Variable var = get_variable(state, node->value.var.name);
+                //int index = get_variable_location(state, node->value.var.name);
+				int index = var.stack_pos;
                 if(index == -1) {
                     PRINT_ERROR(node->loc, "variable `"View_Print"` referenced before assignment", View_Arg(node->value.var.name));
                 }
-				if(get_variable(state, node->value.var.name).global) gen_global_inswap(state, index);
+				if(var.global) gen_global_inswap(state, index);
                 else gen_inswap(state, state->stack_s-index);    
-				gen_pop(state);
+				if(!var.is_struct) gen_pop(state);
             } break;
             case TYPE_FIELD_REASSIGN: {
                 String_View structure = node->value.field.structure;
