@@ -387,15 +387,18 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 	fprintf(file, "void native_"View_Print"(Machine *machine) {\n", View_Arg(func.name));
 	for(int i = func.args.count-1; i >= 0; i--) {
 		fprintf(file, "\tData %c = pop(machine);\n", (char)i+'a');
-		fprintf(file, "\tif(%c.type != %s_TYPE) {\n", (char)i+'a', data_typesss[func.args.data[i].type]);		
-		fprintf(file, "\t\tfprintf(stderr, \"expected type %%d but found: %%d\\n\", %s_TYPE, %c.type);\n", 
-					data_typesss[func.args.data[i].type], (char)i+'a');
-		fprintf(file, "\t\texit(1);\n");
-		fprintf(file, "\t}\n");
+		//fprintf(file, "\tif(%c.type != %s_TYPE) {\n", (char)i+'a', data_typesss[func.args.data[i].type]);		
+		//fprintf(file, "\t\tfprintf(stderr, \"expected type %%d but found: %%d\\n\", %s_TYPE, %c.type);\n", 
+		//			data_typesss[func.args.data[i].type], (char)i+'a');
+		//fprintf(file, "\t\texit(1);\n");
+		//fprintf(file, "\t}\n");
 	}
 	if(func.return_type == TYPE_VOID) fprintf(file, View_Print"(", View_Arg(func.name));
 	else fprintf(file, "\t%s result = "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
 	for(size_t i = 0; i < func.args.count; i++) {
+		if(func.args.data[i].is_struct) {
+			fprintf(file, "*(native_"View_Print"*)", View_Arg(func.args.data[i].struct_name));
+		}
 		fprintf(file, "%c.word.as_%s", (char)i+'a', data_typess[func.args.data[i].type]);
 		if(i != func.args.count-1) fprintf(file, ", ");		
 	}
@@ -905,7 +908,7 @@ void generate(Program_State *state, Program *program) {
 					ASSERT(arg.type < DATA_COUNT, "type is invalid!");
 					fprintf(file, "	%s "View_Print";\n", data_typess[arg.type], View_Arg(arg.name));
 				}
-				fprintf(file, "} "View_Print";\n", View_Arg(cur_struct.name));
+				fprintf(file, "} native_"View_Print";\n", View_Arg(cur_struct.name));
 			}
 			fclose(file);
 		}
@@ -924,7 +927,7 @@ void generate(Program_State *state, Program *program) {
 		char *output = malloc(sizeof(char)*128);
 		sprintf(output, View_Print".c", View_Arg(program->ext_nodes.data[i].value.expr_stmt->value.builtin.ext_func.file_name));
 		if(access(output, F_OK) == 0) {
-			//ASSERT(remove(output) == 0, "Could not remove the native file %s: %s", output, strerror(errno));
+			ASSERT(remove(output) == 0, "Could not remove the native file %s: %s", output, strerror(errno));
 		}
 		free(output);
 	}
