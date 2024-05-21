@@ -539,6 +539,8 @@ void print_expr(Expr *expr) {
     }
 }
 
+bool is_structure(Parser *parser, String_View name);
+
 Ext_Func parse_external_func_dec(Parser *parser) {
 	Arena *arena = parser->arena;
 	Token_Arr *tokens = parser->tokens;
@@ -548,12 +550,21 @@ Ext_Func parse_external_func_dec(Parser *parser) {
 	token = expect_token(tokens, TT_O_PAREN);
 	// exit condition defined in loop
 	while(true) {
+		Ext_Arg arg = {0};
 		token = token_consume(tokens);
 		if(token.type == TT_C_PAREN) break;
 		else if(token.type != TT_TYPE) {
-			PRINT_ERROR(token.loc, "expected type `type` but found %s\n", token_types[token.type]);
+			if(is_structure(parser, token.value.ident)) {
+				arg.is_struct = true;
+				arg.struct_name = token.value.ident;
+				arg.type = TYPE_PTR;
+			} else {
+				PRINT_ERROR(token.loc, "expected type `type` but found %s\n", token_types[token.type]);
+			}
+		} else {
+			arg.type = token.value.type;
 		}
-		ADA_APPEND(arena, &ext_func.args, token.value.type);
+		ADA_APPEND(arena, &ext_func.args, arg);
 		token = token_consume(tokens);
 		if(token.type == TT_C_PAREN) break;
 		else if(token.type != TT_COMMA) PRINT_ERROR(token.loc, "expected comma but found `%s`", token_types[token.type]);
@@ -640,9 +651,9 @@ Ext_Func_Call parse_ext_func_call(Parser *parser, Ext_Func *func) {
 	Ext_Func_Call ext = {0};
 	for(size_t i = 0; i < func->args.count; i++) {
 		Expr *expr = parse_expr(parser);
-		if(!is_valid_types(expr->data_type, func->args.data[i])) {
+		if(!is_valid_types(expr->data_type, func->args.data[i].type)) {
 			PRINT_ERROR(expr->loc, "expected type `%s` but found type `%s`", 
-						data_types[func->args.data[i]].data, data_types[expr->type].data);
+						data_types[func->args.data[i].type].data, data_types[expr->type].data);
 		}
 		ADA_APPEND(parser->arena, &ext.args, expr);
 		if(i != func->args.count-1) expect_token(parser->tokens, TT_COMMA);
@@ -899,6 +910,17 @@ Struct get_structure(Location loc, Parser *parser, String_View name) {
     }
     PRINT_ERROR(loc, "unknown struct\n");
 }
+							
+bool is_structure(Parser *parser, String_View name) {
+    for(size_t i = 0; i < parser->symbols.count; i++) {
+		if(parser->symbols.data[i].type != SYMBOL_STRUCT) continue;
+        if(view_cmp(name, parser->symbols.data[i].val.structure.name)) {
+            return true;
+        }
+    }
+	return false;
+}
+
 
 bool is_field(Struct *structure, String_View field) {
     for(size_t i = 0; i < structure->values.count; i++) {
@@ -1125,7 +1147,6 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 						if(node.value.expr_stmt->value.builtin.type == BUILTIN_DLL) ADA_APPEND(arena, &parser.ext_nodes, node);
 						else ADA_APPEND(arena, &root, node);
 						break;
-	                    //PRINT_ERROR(token.loc, "unexpected token `%s`", token_types[token.type]);
 	                }
 	                ADA_APPEND(arena, &root, node);                
 				}

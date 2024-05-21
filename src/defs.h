@@ -138,11 +138,23 @@ typedef struct {
 	size_t count;
 	size_t capacity;
 } Data_Types;
+	
+typedef struct {
+	Type_Type type;
+	bool is_struct;
+	String_View struct_name;
+} Ext_Arg;
+	
+typedef struct {
+	Ext_Arg *data;
+	size_t count;
+	size_t capacity;
+} Ext_Args;
 
 typedef struct {
 	String_View file_name;
 	String_View name;
-	Data_Types args;
+	Ext_Args args;
 	Type_Type return_type;
 } Ext_Func;
 	
