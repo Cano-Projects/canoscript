@@ -11,7 +11,7 @@ char *data_typess[DATA_COUNT] = {
     "char",                    
     "float",            
     "double",            
-    "pointer"                
+    "pointer",
     "u8",
 	"u16",                	
     "u32",                	
@@ -380,23 +380,9 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 	(void)state;
 	char *output_name = malloc(sizeof(char)*256);
 	sprintf(output_name, View_Print".c", View_Arg(func.file_name));
-	FILE *file;
-	if(access(output_name, F_OK) == 0) {
-		file = fopen(output_name, "a");		
-		if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
-		fprintf(file, "\n");
-	} else {
-		file = fopen(output_name, "w");		
-		if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
-		fprintf(file, "#include <stdio.h>\n");
-		fprintf(file, "#define TIM_IMPLEMENTATION\n");	
-		fprintf(file, "#include <tim.h>\n");
-	}
-	fprintf(file, "typedef void* pointer;\n");			
-	fprintf(file, "typedef uint8_t u8;\n");					
-	fprintf(file, "typedef uint16_t u16;\n");				
-	fprintf(file, "typedef uint32_t u32;\n");				
-	fprintf(file, "typedef uint64_t u64;\n");					
+	ASSERT(access(output_name, F_OK) == 0, "file does not exist");		
+	FILE *file = fopen(output_name, "a");		
+	if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
 	
 	fprintf(file, "void native_"View_Print"(Machine *machine) {\n", View_Arg(func.name));
 	for(int i = func.args.count-1; i >= 0; i--) {
@@ -899,6 +885,34 @@ void gen_label_arr(Program_State *state) {
     
 void generate(Program_State *state, Program *program) {
 	for(size_t i = 0; i < program->ext_nodes.count; i++) {
+		char *output = malloc(sizeof(char)*128);
+		sprintf(output, View_Print".c", View_Arg(program->ext_nodes.data[i].value.expr_stmt->value.builtin.ext_func.file_name));
+		if(access(output, F_OK) != 0) {
+			FILE *file = fopen(output, "w");
+			fprintf(file, "#include <stdio.h>\n");
+			fprintf(file, "#define TIM_IMPLEMENTATION\n");	
+			fprintf(file, "#include <tim.h>\n");
+			fprintf(file, "typedef void* pointer;\n");			
+			fprintf(file, "typedef uint8_t u8;\n");					
+			fprintf(file, "typedef uint16_t u16;\n");				
+			fprintf(file, "typedef uint32_t u32;\n");				
+			fprintf(file, "typedef uint64_t u64;\n");					
+			for(size_t s = 0; s < state->structs.count; s++) {
+				Struct cur_struct = state->structs.data[s].value.structs;
+				fprintf(file, "typedef struct {\n");
+				for(size_t f = 0; f < cur_struct.values.count; f++) {
+					Variable arg = cur_struct.values.data[f].value.var;
+					ASSERT(arg.type < DATA_COUNT, "type is invalid!");
+					fprintf(file, "	%s "View_Print";\n", data_typess[arg.type], View_Arg(arg.name));
+				}
+				fprintf(file, "} "View_Print";\n", View_Arg(cur_struct.name));
+			}
+			fclose(file);
+		}
+		free(output);
+	}
+
+	for(size_t i = 0; i < program->ext_nodes.count; i++) {
 		gen_builtin(state, program->ext_nodes.data[i].value.expr_stmt);
 	}
 
@@ -910,7 +924,7 @@ void generate(Program_State *state, Program *program) {
 		char *output = malloc(sizeof(char)*128);
 		sprintf(output, View_Print".c", View_Arg(program->ext_nodes.data[i].value.expr_stmt->value.builtin.ext_func.file_name));
 		if(access(output, F_OK) == 0) {
-			ASSERT(remove(output) == 0, "Could not remove the native file %s: %s", output, strerror(errno));
+			//ASSERT(remove(output) == 0, "Could not remove the native file %s: %s", output, strerror(errno));
 		}
 		free(output);
 	}
