@@ -908,7 +908,7 @@ Struct get_structure(Location loc, Parser *parser, String_View name) {
             return parser->symbols.data[i].val.structure;
         }
     }
-    PRINT_ERROR(loc, "unknown struct\n");
+    PRINT_ERROR(loc, "unknown struct "View_Print, View_Arg(name));
 }
 							
 bool is_structure(Parser *parser, String_View name) {
@@ -1059,13 +1059,20 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 						if(expr->data_type != TYPE_PTR) 
 									PRINT_ERROR(node.loc, 
 										"expected struct definition but found `%s`", data_types[expr->type].data);
+						Struct structure = get_structure(node.loc, &parser, node.value.var.struct_name);
+						for(size_t i = 0; i < expr->value.structure.values.count; i++) {
+							if(!is_valid_types(
+											expr->value.structure.values.data[i]->data_type,
+											structure.values.data[i].value.var.type)) {
+								PRINT_ERROR(node.loc, "expression does not match the field type");														
+							}
+							expr->value.structure.values.data[i]->data_type = structure.values.data[i].value.var.type;
+						}
 						ADA_APPEND(parser.arena, &node.value.var.value, expr);
                     } else {
                         ADA_APPEND(arena, &node.value.var.value, parse_expr(&parser));    
 						if(!is_valid_types(node.value.var.value.data[0]->data_type, node.value.var.type)) {
-						//if(node.value.var.value.data[0]->data_type != node.value.var.type && 
-													//node.value.var.type != TYPE_STR) {
-							PRINT_ERROR(node.loc, "expression does match the type of the var "View_Print, View_Arg(node.value.var.name));
+							PRINT_ERROR(node.loc, "expression does not match the type of the var "View_Print, View_Arg(node.value.var.name));
 						}
 						node.value.var.value.data[0]->data_type = node.value.var.type;
                     }
