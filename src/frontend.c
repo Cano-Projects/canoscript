@@ -1061,12 +1061,14 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 										"expected struct definition but found `%s`", data_types[expr->type].data);
 						Struct structure = get_structure(node.loc, &parser, node.value.var.struct_name);
 						for(size_t i = 0; i < expr->value.structure.values.count; i++) {
+							Expr *field = expr->value.structure.values.data[i];
 							if(!is_valid_types(
-											expr->value.structure.values.data[i]->data_type,
+											field->data_type,
 											structure.values.data[i].value.var.type)) {
-								PRINT_ERROR(node.loc, "expression does not match the field type");														
+								PRINT_ERROR(node.loc, "expression does not match the type of field `"
+															View_Print"`", View_Arg(structure.values.data[i].value.var.name));														
 							}
-							expr->value.structure.values.data[i]->data_type = structure.values.data[i].value.var.type;
+							field->data_type = structure.values.data[i].value.var.type;
 						}
 						ADA_APPEND(parser.arena, &node.value.var.value, expr);
                     } else {
