@@ -385,13 +385,11 @@ Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc)
 	if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
 	
 	fprintf(file, "void native_"View_Print"(Machine *machine) {\n", View_Arg(func.name));
+	if(func.args.count == 0 && func.return_type == TYPE_VOID) {
+		fprintf(file, "(void)machine;");
+	}
 	for(int i = func.args.count-1; i >= 0; i--) {
 		fprintf(file, "\tData %c = pop(machine);\n", (char)i+'a');
-		//fprintf(file, "\tif(%c.type != %s_TYPE) {\n", (char)i+'a', data_typesss[func.args.data[i].type]);		
-		//fprintf(file, "\t\tfprintf(stderr, \"expected type %%d but found: %%d\\n\", %s_TYPE, %c.type);\n", 
-		//			data_typesss[func.args.data[i].type], (char)i+'a');
-		//fprintf(file, "\t\texit(1);\n");
-		//fprintf(file, "\t}\n");
 	}
 	if(func.return_type == TYPE_VOID) fprintf(file, View_Print"(", View_Arg(func.name));
 	else fprintf(file, "\t%s result = "View_Print"(", data_typess[func.return_type], View_Arg(func.name));

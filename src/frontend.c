@@ -636,7 +636,13 @@ Variable get_var(Location loc, Parser *parser, String_View name) {
 			if(view_cmp(func.args.data[i].value.var.name, name)) return func.args.data[i].value.var;
 		}
 	}
-	PRINT_ERROR(loc, "Unknown variable: "View_Print"\n", View_Arg(name));
+// TODO: fix
+	if(loc.filename)
+		PRINT_ERROR(loc, "Unknown variable: "View_Print"\n", View_Arg(name));
+	else {
+		fprintf(stderr, "no var");
+		exit(1);
+	}
 }
 
 // TODO: update to use proper symbol table

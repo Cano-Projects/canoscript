@@ -1158,8 +1158,8 @@ void run_instructions(Machine *machine) {
 				TYPE_OP(as_u8, U8_TYPE, >=);
             } break;
             case INST_CMPLE: {
-                a = machine->stack[machine->stack_size - 1];
-                b = machine->stack[machine->stack_size - 2];
+                b = machine->stack[machine->stack_size - 1];
+                a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
 				TYPE_OP(as_u8, U8_TYPE, <=);
             } break;
