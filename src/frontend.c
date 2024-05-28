@@ -583,15 +583,19 @@ Builtin parse_builtin_node(Builtin_Type type, Parser *parser) {
     };
 	if(builtin.type == BUILTIN_DLL) {
 		Token file_name = expect_token(tokens, TT_STRING);
-		Token token = token_consume(tokens);
-		if(token.type != TT_COMMA) {
-			PRINT_ERROR(token.loc, "expected comma but found `%s`\n", token_types[token.type]);
+		expect_token(tokens, TT_COMMA);
+		builtin.ext_funcs.file_name = file_name.value.string;
+		while(true) {
+			Ext_Func func_dec = parse_external_func_dec(parser);
+			DA_APPEND(&builtin.ext_funcs, func_dec);
+			expect_token(tokens, TT_COMMA);
+	        Symbol symbol = {.val.ext=func_dec, .type=SYMBOL_EXT};
+	        ADA_APPEND(arena, &parser->symbols, symbol);
+			if(token_peek(tokens, 0).type == TT_END) {
+				token_consume(tokens);
+				break;
+			}
 		}
-		Ext_Func func_dec = parse_external_func_dec(parser);
-		func_dec.file_name = file_name.value.string;
-		builtin.ext_func = func_dec;	
-        Symbol symbol = {.val.ext=func_dec, .type=SYMBOL_EXT};
-        ADA_APPEND(arena, &parser->symbols, symbol);
 	} else {
 	    ADA_APPEND(arena, &builtin.value, parse_expr(parser));
 	    while(token_peek(tokens, 0).type == TT_COMMA) {

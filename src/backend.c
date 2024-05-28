@@ -376,46 +376,49 @@ Type_Type get_variable_type(Program_State *state, String_View name) {
 	return get_variable(state, name).type;
 }
 	
-Ext_Func gen_ext_func_wrapper(Program_State *state, Ext_Func func, Location loc) {
-	(void)state;
+Ext_Funcs gen_ext_func_wrapper(Ext_Funcs funcs, Location loc) {
 	char *output_name = malloc(sizeof(char)*256);
-	sprintf(output_name, View_Print".c", View_Arg(func.file_name));
+	sprintf(output_name, View_Print".c", View_Arg(funcs.file_name));
 	ASSERT(access(output_name, F_OK) == 0, "file does not exist");		
 	FILE *file = fopen(output_name, "a");		
-	if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(func.file_name));
-	
-	fprintf(file, "void native_"View_Print"(Machine *machine) {\n", View_Arg(func.name));
-	if(func.args.count == 0 && func.return_type == TYPE_VOID) {
-		fprintf(file, "(void)machine;");
-	}
-	for(int i = func.args.count-1; i >= 0; i--) {
-		fprintf(file, "\tData %c = pop(machine);\n", (char)i+'a');
-	}
-	if(func.return_type == TYPE_VOID) fprintf(file, View_Print"(", View_Arg(func.name));
-	else fprintf(file, "\t%s result = "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
-	for(size_t i = 0; i < func.args.count; i++) {
-		if(func.args.data[i].is_struct) {
-			fprintf(file, "*(native_"View_Print"*)", View_Arg(func.args.data[i].struct_name));
+	if(file == NULL) PRINT_ERROR(loc, "Could not open file "View_Print"\n", View_Arg(funcs.data[0].file_name));
+	Ext_Funcs new_funcs = {0};
+	for(size_t i = 0; i < funcs.count; i++) {
+		Ext_Func func = funcs.data[i];
+		fprintf(file, "void native_"View_Print"(Machine *machine) {\n", View_Arg(func.name));
+		if(func.args.count == 0 && func.return_type == TYPE_VOID) {
+			fprintf(file, "(void)machine;");
 		}
-		fprintf(file, "%c.word.as_%s", (char)i+'a', data_typess[func.args.data[i].type]);
-		if(i != func.args.count-1) fprintf(file, ", ");		
+		for(int i = func.args.count-1; i >= 0; i--) {
+			fprintf(file, "\tData %c = pop(machine);\n", (char)i+'a');
+		}
+		if(func.return_type == TYPE_VOID) fprintf(file, View_Print"(", View_Arg(func.name));
+		else fprintf(file, "\t%s result = "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
+		for(size_t i = 0; i < func.args.count; i++) {
+			if(func.args.data[i].is_struct) {
+				fprintf(file, "*(native_"View_Print"*)", View_Arg(func.args.data[i].struct_name));
+			}
+			fprintf(file, "%c.word.as_%s", (char)i+'a', data_typess[func.args.data[i].type]);
+			if(i != func.args.count-1) fprintf(file, ", ");		
+		}
+		fprintf(file, ");\n");	
+		if(func.return_type != TYPE_VOID) {
+			fprintf(file, "\tpush(machine, (Word){.as_%s=result}, %s_TYPE);\n", 
+							data_typess[func.return_type], data_typesss[func.return_type]);
+		}
+		fprintf(file, "}\n");
+		char *func_name = malloc(sizeof(char)*128);
+		sprintf(func_name, "native_"View_Print, View_Arg(func.name));
+		Ext_Func new_func = {
+			.file_name = {output_name, funcs.file_name.len+sizeof(".c")-1},
+			.name = {func_name, func.name.len+sizeof("native_")-1},
+		};
+		DA_APPEND(&new_funcs, new_func);
 	}
-	fprintf(file, ");\n");	
-	if(func.return_type != TYPE_VOID) {
-		fprintf(file, "\tpush(machine, (Word){.as_%s=result}, %s_TYPE);\n", 
-						data_typess[func.return_type], data_typesss[func.return_type]);
-	}
-	fprintf(file, "}\n");
-	char *func_name = malloc(sizeof(char)*128);
-	sprintf(func_name, "native_"View_Print, View_Arg(func.name));
-	Ext_Func new_func = {
-		.file_name = {output_name, func.file_name.len+sizeof(".c")-1},
-		.name = {func_name, func.name.len+sizeof("native_")-1},
-	};
-	fclose(file);
-	return new_func;
+	fclose(file);		
+	return new_funcs;
 }
-    
+
 void gen_builtin(Program_State *state, Expr *expr) {
     ASSERT(expr->type == EXPR_BUILTIN, "type is incorrect");
     for(size_t i = 0; i < expr->value.builtin.value.count; i++) {
@@ -452,25 +455,28 @@ void gen_builtin(Program_State *state, Expr *expr) {
             state->stack_s -= 1;
         } break;
         case BUILTIN_DLL: {
-			Ext_Func new_func = gen_ext_func_wrapper(state, expr->value.builtin.ext_func, expr->loc);
+			Ext_Funcs new_funcs = gen_ext_func_wrapper(expr->value.builtin.ext_funcs, expr->loc);
 			char *output = malloc(sizeof(char)*128);
-			sprintf(output, View_Print".so", View_Arg(new_func.file_name));
+			sprintf(output, View_Print".so", View_Arg(new_funcs.data[0].file_name));
 			
 			char command[1024] = {0};
 			sprintf(command, "gcc -L. -Wall -Wextra -Wno-implicit-function-declaration -fPIC -shared -o %s "View_Print" "View_Print, 
 				output,
-				View_Arg(new_func.file_name),
-				View_Arg(expr->value.builtin.ext_func.file_name));
+				View_Arg(new_funcs.data[0].file_name),
+				View_Arg(expr->value.builtin.ext_funcs.file_name));
+				
 			if(system(command) != 0) {
 				printf("Command failed!\n");
 				exit(1);
 			}
-			
-			gen_push_str(state, (String_View){output, strlen(output)});				
-			gen_push_str(state, new_func.name);					
-			Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
-			DA_APPEND(&state->machine.instructions, inst);
-            state->stack_s -= 2;
+			for(size_t i = 0; i < new_funcs.count; i++) {
+				Ext_Func new_func = new_funcs.data[i];
+				gen_push_str(state, (String_View){output, strlen(output)});				
+				gen_push_str(state, new_func.name);					
+				Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
+				DA_APPEND(&state->machine.instructions, inst);
+	            state->stack_s -= 2;
+			}
         } break;
         case BUILTIN_CALL: {
 				/*		
@@ -887,7 +893,8 @@ void gen_label_arr(Program_State *state) {
 void generate(Program_State *state, Program *program) {
 	for(size_t i = 0; i < program->ext_nodes.count; i++) {
 		char *output = malloc(sizeof(char)*128);
-		sprintf(output, View_Print".c", View_Arg(program->ext_nodes.data[i].value.expr_stmt->value.builtin.ext_func.file_name));
+		sprintf(output, View_Print".c", 
+				View_Arg(program->ext_nodes.data[i].value.expr_stmt->value.builtin.ext_funcs.file_name));
 		if(access(output, F_OK) != 0) {
 			FILE *file = fopen(output, "w");
 			fprintf(file, "#include <stdio.h>\n");
@@ -923,7 +930,8 @@ void generate(Program_State *state, Program *program) {
 
 	for(size_t i = 0; i < program->ext_nodes.count; i++) {
 		char *output = malloc(sizeof(char)*128);
-		sprintf(output, View_Print".c", View_Arg(program->ext_nodes.data[i].value.expr_stmt->value.builtin.ext_func.file_name));
+		sprintf(output, View_Print".c", 
+				View_Arg(program->ext_nodes.data[i].value.expr_stmt->value.builtin.ext_funcs.file_name));
 		if(access(output, F_OK) == 0) {
 			ASSERT(remove(output) == 0, "Could not remove the native file %s: %s", output, strerror(errno));
 		}

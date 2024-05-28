@@ -163,13 +163,20 @@ typedef struct {
 	Exprs args;
 	Type_Type return_type;
 } Ext_Func_Call;
+
+typedef struct {
+	Ext_Func *data;
+	size_t count;
+	size_t capacity;
+	String_View file_name;
+} Ext_Funcs;
     
 typedef struct {
     Builtin_Type type;
     Exprs value;
     Type_Type return_type;
 	// optional
-	Ext_Func ext_func;	
+	Ext_Funcs ext_funcs;	
 } Builtin;
 
 typedef struct {
