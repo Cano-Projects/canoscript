@@ -1244,16 +1244,29 @@ void run_instructions(Machine *machine) {
                 ip = machine->program_size;
                 break;
 			case INST_LOAD_LIBRARY: {
-				char *func_name = (char*)pop(machine).word.as_pointer;
 				char *lib_name = (char*)pop(machine).word.as_pointer;			
-				void *lib = dlopen(lib_name, RTLD_LAZY);
+				char *func_name = (char*)pop(machine).word.as_pointer;		
+				void *lib = dlopen(lib_name, RTLD_LAZY);		
 				if(!lib) {
-					fprintf(stderr, "%s\n", dlerror());
+					fprintf(stderr, "error loading lib: %s\n", dlerror());
 					exit(1);
 				}
 				native func;
 				*(void**)(&func) = dlsym(lib, func_name);				
 				machine_load_native(machine, func);
+		// WIP FIX THIS
+		/*
+				while(func_name[0] != '\0') {
+					native func;				
+					*(void**)(&func) = dlsym(lib, func_name);							
+					if(!func) {
+						fprintf(stderr, "error loading function: %s\n", dlerror());
+						exit(1);
+					}
+					machine_load_native(machine, func);
+					func_name = (char*)pop(machine).word.as_pointer;						
+				}
+		*/
 			} break;
             case INST_COUNT:
                 assert(false);

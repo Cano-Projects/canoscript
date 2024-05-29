@@ -469,14 +469,20 @@ void gen_builtin(Program_State *state, Expr *expr) {
 				printf("Command failed!\n");
 				exit(1);
 			}
+			//gen_push_str(state, (String_View){"\0", 1});											
 			for(size_t i = 0; i < new_funcs.count; i++) {
-				Ext_Func new_func = new_funcs.data[i];
-				gen_push_str(state, (String_View){output, strlen(output)});				
+				Ext_Func new_func = new_funcs.data[i];			
+				
 				gen_push_str(state, new_func.name);					
+				gen_push_str(state, (String_View){output, strlen(output)});								
 				Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
 				DA_APPEND(&state->machine.instructions, inst);
 	            state->stack_s -= 2;
 			}
+			//gen_push_str(state, (String_View){output, strlen(output)});				
+			//Inst inst = create_inst(INST_LOAD_LIBRARY, (Word){.as_int=0}, 0);
+			//DA_APPEND(&state->machine.instructions, inst);
+            //state->stack_s -= 2;
         } break;
         case BUILTIN_CALL: {
 				/*		
