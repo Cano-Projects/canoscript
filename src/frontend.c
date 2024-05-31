@@ -388,24 +388,24 @@ Token_Arr lex(Arena *arena, Arena *string_arena, char *entry_filename, String_Vi
                     };
                     ADA_APPEND(arena, &tokens, token);     
                 } else if(isdigit(*view.data)) {
-					if(*view.data == '0' && view.len > 1 && *(view.data+1) == 'x') {
-		                view = view_chop_left(view);
-						token.type = TT_INT;
-		                Dynamic_Str number = {0};    
-						view = view_chop_left(view);
-		                while(view.len > 0 && isword(*view.data) && *view.data != '_') {
-		                    ADA_APPEND(string_arena, &number, *view.data);            
-		                    view = view_chop_left(view);    
+					token.type = TT_INT;
+                    Dynamic_Str num = {0};
+					if(*view.data == '0' && view.len > 1) {
+						if(*(view.data+1) == 'x' || *(view.data+1) == 'b') {
+			                view = view_chop_left(view);
+							int base = *view.data == 'x' ? 16 : 2;
+							view = view_chop_left(view);
+			                while(view.len > 0 && isword(*view.data) && *view.data != '_') {
+			                    ADA_APPEND(string_arena, &num, *view.data);            
+			                    view = view_chop_left(view);    
+							}
+							ADA_APPEND(string_arena, &num, '\0');
+							token.value.integer = strtoll(num.data, NULL, base);
+		                    ADA_APPEND(arena, &tokens, token);                        
+							break;
 						}
-						ADA_APPEND(string_arena, &number, '\0');
-						token.value.integer = strtoll(number.data, NULL, 16);
-						printf("%d\n", token.value.integer);
-	                    ADA_APPEND(arena, &tokens, token);                        
-						break;
 					}
 
-                    Dynamic_Str num = {0};
-                    token.type = TT_INT;            
                     while(view.len > 0 && (isdigit(*view.data) || *view.data == '.')) {
                         if(*view.data == '.') token.type = TT_FLOAT_LIT;
                         ADA_APPEND(arena, &num, *view.data);
