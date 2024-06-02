@@ -395,7 +395,7 @@ Ext_Funcs gen_ext_func_wrapper(Ext_Funcs funcs, Location loc) {
 		if(func.return_type == TYPE_VOID) fprintf(file, View_Print"(", View_Arg(func.name));
 		else fprintf(file, "\t%s result = "View_Print"(", data_typess[func.return_type], View_Arg(func.name));
 		for(size_t i = 0; i < func.args.count; i++) {
-			if(func.args.data[i].is_struct) {
+			if(func.args.data[i].is_struct && !func.args.data[i].is_ptr) {
 				fprintf(file, "*(native_"View_Print"*)", View_Arg(func.args.data[i].struct_name));
 			}
 			fprintf(file, "%c.word.as_%s", (char)i+'a', data_typess[func.args.data[i].type]);

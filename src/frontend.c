@@ -4,8 +4,10 @@
 #include "tipp.h"
 
 char *token_types[TT_COUNT] = {"none", "write", "exit", "builtin", "ident", 
-                               ":", "(", ")", "[", "]", "{", "}", ",", ".", "=", "==", "!=", ">=", "<=", ">", "<", "+", "-", "*", "/", "%",
-                               "string", "char", "integer", "float", "struct", "void", "type", "if", "else", "while", "then", 
+                               ":", "(", ")", "[", "]", "{", "}", ",", ".", 
+							   "=", "==", "!=", ">=", "<=", ">", "<", "+", "-", "*", "/", "%", "&",
+                               "string", "char", "integer", "float", "struct", "void", "type", 
+							   "if", "else", "while", "then", 
                                "return", "end", "const"};
 
 String_View data_types[DATA_COUNT] = {
@@ -334,6 +336,10 @@ Token_Arr lex(Arena *arena, Arena *string_arena, char *entry_filename, String_Vi
                 token.type = TT_C_CURLY;
                 ADA_APPEND(arena, &tokens, token);                                                    
                 break;
+            case '&':
+                token.type = TT_AND;
+                ADA_APPEND(arena, &tokens, token);                                                    
+                break;
             case ',':
                 token.type = TT_COMMA;
                 ADA_APPEND(arena, &tokens, token);                                                    
@@ -574,6 +580,10 @@ Ext_Func parse_external_func_dec(Parser *parser) {
 				arg.is_struct = true;
 				arg.struct_name = token.value.ident;
 				arg.type = TYPE_PTR;
+				if(token_peek(tokens, 0).type == TT_AND) {
+					token_consume(tokens);
+					arg.is_ptr = true;
+				}
 			} else {
 				PRINT_ERROR(token.loc, "expected type `type` but found %s\n", token_types[token.type]);
 			}

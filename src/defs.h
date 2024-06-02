@@ -142,6 +142,7 @@ typedef struct {
 typedef struct {
 	Type_Type type;
 	bool is_struct;
+	bool is_ptr;
 	String_View struct_name;
 } Ext_Arg;
 	
@@ -476,6 +477,7 @@ typedef enum {
     TT_MULT,
     TT_DIV,
     TT_MOD,
+	TT_AND,
     TT_STRING,
     TT_CHAR_LIT,
     // TODO TT_INT_LIT
