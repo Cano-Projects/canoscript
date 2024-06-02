@@ -312,9 +312,9 @@ char *append_ext(char *filename, char *ext) {
     return output_filename;
 }
     
-char *op_types[] = {"add", "sub", "mul", "div", "mod", "cmpe", "cmpne", "cmpge", "cmple", "cmpg", "cmpl"};
+char *op_types[] = {"add", "sub", "mul", "div", "mod", "cmpe", "cmpne", "cmpge", "cmple", "cmpg", "cmpl", "and", "or"};
 Inst_Set op_types_inst[] = {INST_ADD, INST_SUB, INST_MUL, INST_DIV, INST_MOD, INST_CMPE, 
-						 INST_CMPNE, INST_CMPGE, INST_CMPLE, INST_CMPG, INST_CMPL};
+						 INST_CMPNE, INST_CMPGE, INST_CMPLE, INST_CMPG, INST_CMPL, INST_AND, INST_OR};
 
 Function *get_func(Functions functions, String_View name) {
     for(size_t i = 0; i < functions.count; i++) {

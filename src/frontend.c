@@ -5,7 +5,7 @@
 
 char *token_types[TT_COUNT] = {"none", "write", "exit", "builtin", "ident", 
                                ":", "(", ")", "[", "]", "{", "}", ",", ".", 
-							   "=", "==", "!=", ">=", "<=", ">", "<", "+", "-", "*", "/", "%", "&",
+							   "=", "==", "!=", ">=", "<=", ">", "<", "+", "-", "*", "/", "%", "&&", "||", "&",
                                "string", "char", "integer", "float", "struct", "void", "type", 
 							   "if", "else", "while", "then", 
                                "return", "end", "const"};
@@ -179,6 +179,12 @@ bool is_operator(String_View view) {
         case '=':
             if(view.len > 1 && view.data[1] == '=') return true;        
             return false;
+        case '&':
+            if(view.len > 1 && view.data[1] == '&') return true;        
+            return false;
+        case '|':
+            if(view.len > 1 && view.data[1] == '|') return true;        
+            return false;
         case '!':
             if(view.len > 1 && view.data[1] == '=') return true;        
             return false;
@@ -238,6 +244,18 @@ Token create_operator_token(char *filename, size_t row, size_t col, String_View 
             } else {
                 *view = view_chop_left(*view);
                 token.type = TT_LESS;
+            }
+            break;
+        case '&':
+            if(view->len > 1 && view->data[1] == '&') {
+                *view = view_chop_left(*view);
+                token.type = TT_AND;        
+            }
+            break;
+        case '|':
+            if(view->len > 1 && view->data[1] == '|') {
+                *view = view_chop_left(*view);
+                token.type = TT_OR;        
             }
             break;
         default:
@@ -336,10 +354,6 @@ Token_Arr lex(Arena *arena, Arena *string_arena, char *entry_filename, String_Vi
                 token.type = TT_C_CURLY;
                 ADA_APPEND(arena, &tokens, token);                                                    
                 break;
-            case '&':
-                token.type = TT_AND;
-                ADA_APPEND(arena, &tokens, token);                                                    
-                break;
             case ',':
                 token.type = TT_COMMA;
                 ADA_APPEND(arena, &tokens, token);                                                    
@@ -430,7 +444,11 @@ Token_Arr lex(Arena *arena, Arena *string_arena, char *entry_filename, String_Vi
 				} else if(*view.data == '=') {
                     token.type = TT_EQ;
                     ADA_APPEND(arena, &tokens, token);                                        
-                } else if(isspace(*view.data)) {
+                } else if(*view.data == '&') { 
+	                token.type = TT_AMPERSAND;
+	                ADA_APPEND(arena, &tokens, token);                                                    
+				} else if(isspace(*view.data)) {
+
                     view = view_chop_left(view);                   
                     continue;
                 } else {
@@ -490,6 +508,8 @@ Precedence op_get_prec(Token_Type type) {
         case TT_MULT:
         case TT_DIV:
         case TT_MOD:
+		case TT_AND:
+		case TT_OR:
             return PREC_2;
             break;
         default:
@@ -534,6 +554,12 @@ Operator create_operator(Token_Type type) {
         case TT_LESS:
             op.type = OP_LESS;
             break;
+        case TT_AND:
+            op.type = OP_AND;
+            break;
+        case TT_OR:
+            op.type = OP_OR;
+            break;
         default:
             return (Operator){0};
     }
@@ -546,6 +572,8 @@ bool token_is_op(Token token) {
         case TT_MINUS:
         case TT_MULT:
         case TT_DIV:
+		case TT_AND:
+		case TT_OR:
             return true;    
         default:
             return false;
@@ -580,7 +608,7 @@ Ext_Func parse_external_func_dec(Parser *parser) {
 				arg.is_struct = true;
 				arg.struct_name = token.value.ident;
 				arg.type = TYPE_PTR;
-				if(token_peek(tokens, 0).type == TT_AND) {
+				if(token_peek(tokens, 0).type == TT_AMPERSAND) {
 					token_consume(tokens);
 					arg.is_ptr = true;
 				}
@@ -1294,6 +1322,9 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
             case TT_MINUS:
             case TT_MULT:
             case TT_DIV:
+			case TT_AND:
+			case TT_OR:
+			case TT_AMPERSAND:
             case TT_MOD:
             case TT_NONE:
             case TT_COUNT:

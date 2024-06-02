@@ -40,6 +40,8 @@ typedef enum {
     INST_MUL,
     INST_DIV,
     INST_MOD,
+	INST_AND,
+	INST_OR,
 	// TODO GET RID OF _F OPERATIONS AND REPLACE WITH SWITCH OVER DATA_TYPE
     INST_ADD_F,
     INST_SUB_F,
@@ -1102,6 +1104,14 @@ void run_instructions(Machine *machine) {
 				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
                 if(machine->stack[machine->stack_size - 1].word.as_int == 0) TIM_ERROR("error: cannot divide by 0\n");
                 MATH_OP(as_int, %, INT_TYPE);
+                break;
+            case INST_AND:
+				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
+                MATH_OP(as_int, &&, INT_TYPE);
+                break;
+            case INST_OR:
+				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
+                MATH_OP(as_int, ||, INT_TYPE);
                 break;
             case INST_ADD_F:
                 MATH_OP(as_float, +, FLOAT_TYPE);

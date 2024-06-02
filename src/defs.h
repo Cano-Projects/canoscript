@@ -104,6 +104,8 @@ typedef enum {
     OP_LESS_EQ,
     OP_GREATER,
     OP_LESS,
+	OP_AND,
+	OP_OR,
 } Operator_Type;
     
 typedef enum {
@@ -478,6 +480,8 @@ typedef enum {
     TT_DIV,
     TT_MOD,
 	TT_AND,
+	TT_OR,
+	TT_AMPERSAND,
     TT_STRING,
     TT_CHAR_LIT,
     // TODO TT_INT_LIT
