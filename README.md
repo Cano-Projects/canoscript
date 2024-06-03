@@ -7,6 +7,7 @@ Icon made by [LocalTexan](https://github.com/LocalTexan)
 ## Quickstart
 ```sh
 mkdir build
-make && cd build
+make
+cd build
 ./main <flags> <filename>
 ```
