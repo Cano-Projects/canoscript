@@ -1,0 +1,96 @@
+struct Color {
+	r: u8,
+	g: u8,
+	b: u8,
+	a: u8,
+}
+	
+struct Vector2 {
+	x: u64,
+	y: u64,
+}
+	
+dll "./libraylib.so", 
+	InitWindow(u32, u32, str): void,
+	CloseWindow(): void,
+	WindowShouldClose(): u8,
+	BeginDrawing(): void,
+	EndDrawing(): void,
+	ClearBackground(u32): void,
+	DrawText(str, u32, u32, u32, u32): void,
+	DrawRectangle(int, int, u32, u32, u32): void,
+	IsKeyDown(u32): u8,
+	GetKeyPressed(): u32,
+	SetTargetFPS(u32): void,
+end
+
+KEY_RIGHT: const u32 = 68
+KEY_LEFT: const u32 = 65
+KEY_UP: const u32 = 87
+KEY_DOWN: const u32 = 83
+KEY_SPACE: const u32 = 32
+
+
+HEIGHT: const u32 = 800
+WIDTH: const u32 = 1000
+
+REC_WIDTH: const u32 = 50
+REC_HEIGHT: const u32 = 50
+
+SPEED: const u32 = 10
+JUMP_SPEED: const u32 = 30
+GRAVITY: const u32 = 1
+
+player_velocity: Vector2 = {0, 0}
+
+RecX: int = 250
+RecY: int = 250
+
+REC_COLOR: u32 = 0xFFF5F5F5;
+BG_COLOR: u32 = 0xFF000000
+
+is_grounded: u8 = 0
+
+InitWindow WIDTH, HEIGHT, "raylib FROM CANOSCRIPT"
+
+SetTargetFPS 60
+
+while WindowShouldClose == 0 then
+	player_velocity.x = 0
+
+	if (RecY + REC_HEIGHT) >= HEIGHT then
+		player_velocity.y = 0
+		is_grounded = 1
+	end
+
+	if is_grounded then
+		RecY = HEIGHT - REC_HEIGHT
+	end
+
+	if IsKeyDown KEY_RIGHT then player_velocity.x = SPEED end
+	if IsKeyDown KEY_LEFT then player_velocity.x = 0 - SPEED end
+	if IsKeyDown KEY_SPACE then 
+		if is_grounded then
+			is_grounded = 0
+			player_velocity.y = player_velocity.y - JUMP_SPEED 
+		end
+	end
+
+	if is_grounded == 0 then
+		player_velocity.y = player_velocity.y + GRAVITY
+	end
+
+	if RecX + REC_WIDTH >= WIDTH then RecX = WIDTH - REC_WIDTH end
+	if RecX <= 0 then RecX = 0 end
+
+	RecY = RecY + player_velocity.y
+	RecX = RecX + player_velocity.x
+
+	BeginDrawing
+		DrawText "Raylib + CanoScript", 250, 25, 50, REC_COLOR
+		DrawRectangle RecX, RecY, REC_WIDTH, REC_HEIGHT, REC_COLOR
+		ClearBackground BG_COLOR
+	EndDrawing
+end
+
+CloseWindow
