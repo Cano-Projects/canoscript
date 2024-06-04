@@ -482,7 +482,7 @@ Token token_peek(Token_Arr *tokens, size_t peek_by) {
 Token expect_token(Token_Arr *tokens, Token_Type type) {
     Token token = token_consume(tokens);
     if(token.type != type) {
-        PRINT_ERROR(token.loc, "expected type: `%s`, but found type `%s`\n", 
+        PRINT_ERROR(token.loc, "expected type: `%s`, but found type `%s`", 
                     token_types[type], token_types[token.type]);
     };
 	return token;
@@ -804,6 +804,7 @@ Expr *parse_primary(Parser *parser) {
                 *expr = (Expr){
                     .type = EXPR_FUNCALL,
                     .value.func_call.name = token.value.ident,
+					.loc = token.loc,
                 };
 				Function *function = get_function(expr->loc, functions, expr->value.func_call.name);
 				expr->data_type = function->type;
@@ -1119,10 +1120,11 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                     } else if(node.value.var.is_struct) { 
 						Expr *expr = parse_expr(&parser);
 						node.value.var.type = TYPE_PTR;
-						expr->value.structure.name = node.value.var.name;
-						if(expr->data_type != TYPE_PTR) 
+						if(expr->type != EXPR_FUNCALL) expr->value.structure.name = node.value.var.name;
+						if(expr->data_type != TYPE_PTR) {
 									PRINT_ERROR(node.loc, 
 										"expected struct definition but found `%s`", data_types[expr->type].data);
+						}
 						Struct structure = get_structure(node.loc, &parser, node.value.var.struct_name);
 						for(size_t i = 0; i < expr->value.structure.values.count; i++) {
 							Expr *field = expr->value.structure.values.data[i];
@@ -1201,7 +1203,17 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 	                    }
 	                    token_consume(&tokens);
 	                    if(i == 2) token_consume(&tokens);
-	                    node.value.func_dec.type = tokens.data[0].value.type;
+						Token token = token_peek(&tokens, 0);
+						if(token.type == TT_TYPE) {
+		                    node.value.func_dec.type = token.value.type;
+						} else if(token.type == TT_IDENT) {
+							if(!is_structure(&parser, token.value.ident)) {
+								PRINT_ERROR(token.loc, "Unknown type name `"View_Print"`", View_Arg(token.value.ident));							
+							}
+							node.value.func_dec.type = TYPE_PTR;
+						} else {
+							PRINT_ERROR(token.loc, "unexpected token %s\n", token_types[token.type]);
+						}
 						function.type = node.value.func_dec.type;
 	                    token_consume(&tokens);                                                                        
 	                    node.value.func_dec.label = cur_label;

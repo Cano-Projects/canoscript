@@ -219,6 +219,14 @@ void gen_alloc(Program_State *state, Expr *s, size_t type_s) {
 	Inst inst = create_inst(INST_ALLOC, (Word){.as_int=0}, 0);
 	DA_APPEND(&state->machine.instructions, inst);
 }
+	
+void gen_alloc_s(Program_State *state, size_t s, size_t type_s) {
+    gen_push(state, type_s);
+    gen_push(state, s);
+    gen_mul(state);
+	Inst inst = create_inst(INST_ALLOC, (Word){.as_int=0}, 0);
+	DA_APPEND(&state->machine.instructions, inst);
+}
     
 void gen_struct_alloc(Program_State *state, size_t total_s) {
     gen_push(state, total_s);
@@ -817,8 +825,14 @@ void gen_program(Program_State *state, Nodes nodes) {
                 }
 				// + 1 because we need to place it on the top of the stack after scope_end
                 size_t pos = state->ret_stack.data[state->ret_stack.count-1] + 1;
+		/*
+				if(node->value.expr->type == EXPR_STRUCT) {
+					gen_alloc_s(state, 
+								node->value.expr->value.structure.values.count, 1);		
+				}
+		*/
                 gen_expr(state, node->value.expr);
-                ASSERT(pos <= state->stack_s, "pos is too great");
+                ASSERT(pos <= state->stack_s, "pos is too great: pos = %zu and ss = %zu", pos, state->stack_s);
                 gen_inswap(state, state->stack_s-pos);
                 size_t pre_stack_s = state->stack_s;
                 ret_scope_end(state);

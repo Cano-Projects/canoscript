@@ -319,6 +319,8 @@ char *instructions[INST_COUNT] = {
     "mul",
     "div",
     "mod",
+	"and",
+	"or",
     "add_f",
     "sub_f",
     "mul_f",
@@ -345,6 +347,7 @@ char *instructions[INST_COUNT] = {
     "print",
     "native",
     "entrypoint",
+	"load_lib",
     "ss",
     "halt",
 };
