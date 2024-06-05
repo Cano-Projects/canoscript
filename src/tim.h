@@ -972,8 +972,8 @@ void run_instructions(Machine *machine) {
             } break;
             case INST_ADD:
 				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
-                a = machine->stack[machine->stack_size - 1];
-                b = machine->stack[machine->stack_size - 2];
+                b = machine->stack[machine->stack_size - 1];
+                a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
 				switch(a.type) {
 					case PTR_TYPE:
@@ -1144,37 +1144,193 @@ void run_instructions(Machine *machine) {
                 b = machine->stack[machine->stack_size - 1];
                 a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
-				TYPE_OP(as_u8, U8_TYPE, ==);
+				switch(a.type) {
+					case PTR_TYPE:
+                    case U64_TYPE:
+                        TYPE_OP(as_u64, U64_TYPE, ==);
+                        break;
+					case CHAR_TYPE:
+                    case U8_TYPE:
+                        TYPE_OP(as_u8, U8_TYPE, ==);
+                        break;
+                    case U16_TYPE:
+                        TYPE_OP(as_u16, U16_TYPE, ==);
+                        break;
+                    case U32_TYPE:
+                        TYPE_OP(as_u32, U32_TYPE, ==);
+                        break;
+					case INT_TYPE:
+                        TYPE_OP(as_int, INT_TYPE, ==);
+						break;
+					case FLOAT_TYPE:
+                        TYPE_OP(as_float, FLOAT_TYPE, ==);
+						break;
+					case DOUBLE_TYPE:
+                        TYPE_OP(as_double, DOUBLE_TYPE, ==);
+						break;
+					default:
+						TIM_ERROR("error: not right...\n");
+				}
             } break;
             case INST_CMPNE: {
                 b = machine->stack[machine->stack_size - 1];
                 a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
-				TYPE_OP(as_u8, U8_TYPE, !=);
+				switch(a.type) {
+					case PTR_TYPE:
+                    case U64_TYPE:
+                        TYPE_OP(as_u64, U64_TYPE, !=);
+                        break;
+					case CHAR_TYPE:
+                    case U8_TYPE:
+                        TYPE_OP(as_u8, U8_TYPE, !=);
+                        break;
+                    case U16_TYPE:
+                        TYPE_OP(as_u16, U16_TYPE, !=);
+                        break;
+                    case U32_TYPE:
+                        TYPE_OP(as_u32, U32_TYPE, !=);
+                        break;
+					case INT_TYPE:
+                        TYPE_OP(as_int, INT_TYPE, !=);
+						break;
+					case FLOAT_TYPE:
+                        TYPE_OP(as_float, FLOAT_TYPE, !=);
+						break;
+					case DOUBLE_TYPE:
+                        TYPE_OP(as_double, DOUBLE_TYPE, !=);
+						break;
+					default:
+						TIM_ERROR("error: not right...\n");
+				}
             } break;
             case INST_CMPG: {
                 b = machine->stack[machine->stack_size - 1];
                 a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
-				TYPE_OP(as_u8, U8_TYPE, >);
+				switch(a.type) {
+					case PTR_TYPE:
+                    case U64_TYPE:
+                        TYPE_OP(as_u64, U64_TYPE, >);
+                        break;
+					case CHAR_TYPE:
+                    case U8_TYPE:
+                        TYPE_OP(as_u8, U8_TYPE, >);
+                        break;
+                    case U16_TYPE:
+                        TYPE_OP(as_u16, U16_TYPE, >);
+                        break;
+                    case U32_TYPE:
+                        TYPE_OP(as_u32, U32_TYPE, >);
+                        break;
+					case INT_TYPE:
+                        TYPE_OP(as_int, INT_TYPE, >);
+						break;
+					case FLOAT_TYPE:
+                        TYPE_OP(as_float, FLOAT_TYPE, >);
+						break;
+					case DOUBLE_TYPE:
+                        TYPE_OP(as_double, DOUBLE_TYPE, >);
+						break;
+					default:
+						TIM_ERROR("error: not right...\n");
+				}
             } break;
             case INST_CMPL: {
                 b = machine->stack[machine->stack_size - 1];
                 a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
-				TYPE_OP(as_u8, U8_TYPE, <);
+				switch(a.type) {
+					case PTR_TYPE:
+                    case U64_TYPE:
+                        TYPE_OP(as_u64, U64_TYPE, <);
+                        break;
+					case CHAR_TYPE:
+                    case U8_TYPE:
+                        TYPE_OP(as_u8, U8_TYPE, <);
+                        break;
+                    case U16_TYPE:
+                        TYPE_OP(as_u16, U16_TYPE, <);
+                        break;
+                    case U32_TYPE:
+                        TYPE_OP(as_u32, U32_TYPE, <);
+                        break;
+					case INT_TYPE:
+                        TYPE_OP(as_int, INT_TYPE, <);
+						break;
+					case FLOAT_TYPE:
+                        TYPE_OP(as_float, FLOAT_TYPE, <);
+						break;
+					case DOUBLE_TYPE:
+                        TYPE_OP(as_double, DOUBLE_TYPE, <);
+						break;
+					default:
+						TIM_ERROR("error: not right...\n");
+				}
             } break;
             case INST_CMPGE: {
                 b = machine->stack[machine->stack_size - 1];
                 a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
-				TYPE_OP(as_u8, U8_TYPE, >=);
+				switch(a.type) {
+					case PTR_TYPE:
+                    case U64_TYPE:
+                        TYPE_OP(as_u64, U64_TYPE, >=);
+                        break;
+					case CHAR_TYPE:
+                    case U8_TYPE:
+                        TYPE_OP(as_u8, U8_TYPE, >=);
+                        break;
+                    case U16_TYPE:
+                        TYPE_OP(as_u16, U16_TYPE, >=);
+                        break;
+                    case U32_TYPE:
+                        TYPE_OP(as_u32, U32_TYPE, >=);
+                        break;
+					case INT_TYPE:
+                        TYPE_OP(as_int, INT_TYPE, >=);
+						break;
+					case FLOAT_TYPE:
+                        TYPE_OP(as_float, FLOAT_TYPE, >=);
+						break;
+					case DOUBLE_TYPE:
+                        TYPE_OP(as_double, DOUBLE_TYPE, >=);
+						break;
+					default:
+						TIM_ERROR("error: not right...\n");
+				}
             } break;
             case INST_CMPLE: {
                 b = machine->stack[machine->stack_size - 1];
                 a = machine->stack[machine->stack_size - 2];
                 machine->stack_size -= 2;
-				TYPE_OP(as_u8, U8_TYPE, <=);
+				switch(a.type) {
+					case PTR_TYPE:
+                    case U64_TYPE:
+                        TYPE_OP(as_u64, U64_TYPE, <=);
+                        break;
+					case CHAR_TYPE:
+                    case U8_TYPE:
+                        TYPE_OP(as_u8, U8_TYPE, <=);
+                        break;
+                    case U16_TYPE:
+                        TYPE_OP(as_u16, U16_TYPE, <=);
+                        break;
+                    case U32_TYPE:
+                        TYPE_OP(as_u32, U32_TYPE, <=);
+                        break;
+					case INT_TYPE:
+                        TYPE_OP(as_int, INT_TYPE, <=);
+						break;
+					case FLOAT_TYPE:
+                        TYPE_OP(as_float, FLOAT_TYPE, <=);
+						break;
+					case DOUBLE_TYPE:
+                        TYPE_OP(as_double, DOUBLE_TYPE, <=);
+						break;
+					default:
+						TIM_ERROR("error: not right...\n");
+				}
             } break;
             case INST_ITOF:
                 a = pop(machine);
