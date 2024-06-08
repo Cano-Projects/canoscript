@@ -570,7 +570,12 @@ void gen_expr(Program_State *state, Expr *expr) {
             else gen_indup(state, state->stack_s-index); 
         } break;
 		case EXPR_STRUCT: {
-			size_t offset = 0;
+			size_t size = 0;
+			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
+				size += data_type_s[expr->value.structure.values.data[i]->data_type];
+			}
+			gen_struct_alloc(state, size);
+			size_t offset = 0;			
 			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
 				gen_structure_field(state, offset, expr->value.structure.values.data[i]);
 				offset += data_type_s[expr->value.structure.values.data[i]->data_type];				

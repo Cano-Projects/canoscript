@@ -898,6 +898,7 @@ Expr *parse_expr_1(Parser *parser, Expr *lhs, Precedence min_precedence) {
             Expr *new_lhs = arena_alloc(arena, sizeof(Expr));
             *new_lhs = (Expr) {
                 .type = EXPR_BIN,
+				.data_type = lhs->data_type,
                 .value.bin.lhs = lhs,
                 .value.bin.rhs = rhs,
                 .value.bin.op = op,
@@ -1145,9 +1146,14 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
 						}
 						ADA_APPEND(parser.arena, &node.value.var.value, expr);
                     } else {
-                        ADA_APPEND(arena, &node.value.var.value, parse_expr(&parser));    
-						if(!is_valid_types(node.value.var.value.data[0]->data_type, node.value.var.type)) {
-							PRINT_ERROR(node.loc, "expression does not match the type of the var "View_Print, View_Arg(node.value.var.name));
+						Expr *expr = parse_expr(&parser);
+                        ADA_APPEND(arena, &node.value.var.value, expr);    
+						if(!is_valid_types(expr->data_type, node.value.var.type)) {
+							PRINT_ERROR(node.loc, 
+										"expression does not match the type of the var "View_Print" types %s and %s", 
+										View_Arg(node.value.var.name), 
+										data_types[node.value.var.type].data, 
+										data_types[expr->data_type].data);
 						}
 						node.value.var.value.data[0]->data_type = node.value.var.type;
                     }
