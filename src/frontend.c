@@ -696,7 +696,7 @@ Variable get_var(Location loc, Parser *parser, String_View name) {
 	}
 // TODO: fix
 	if(loc.filename)
-		PRINT_ERROR(loc, "Unknown variable: "View_Print"\n", View_Arg(name));
+		PRINT_ERROR(loc, "Unknown variable: "View_Print, View_Arg(name));
 	else {
 		fprintf(stderr, "no var");
 		exit(1);
@@ -741,6 +741,7 @@ Expr *parse_primary(Parser *parser) {
                 .type = EXPR_INT,
 				.data_type = TYPE_INT,
                 .value.integer = token.value.integer,
+				.loc = token.loc,
             };
             break;
         case TT_FLOAT_LIT:
@@ -748,6 +749,7 @@ Expr *parse_primary(Parser *parser) {
                 .type = EXPR_FLOAT,
 				.data_type = TYPE_FLOAT,
                 .value.floating = token.value.floating,
+				.loc = token.loc,
             };
             break;
         case TT_STRING:
@@ -755,6 +757,7 @@ Expr *parse_primary(Parser *parser) {
                 .type = EXPR_STR,
 				.data_type = TYPE_CHAR,
                 .value.string = token.value.string,
+				.loc = token.loc,
             };
             break;
         case TT_CHAR_LIT:
@@ -762,6 +765,7 @@ Expr *parse_primary(Parser *parser) {
                 .type = EXPR_CHAR,
 				.data_type = TYPE_CHAR,
                 .value.string = token.value.string,
+				.loc = token.loc,
             };
             break;
         case TT_BUILTIN: {
@@ -770,6 +774,7 @@ Expr *parse_primary(Parser *parser) {
                 .type = EXPR_BUILTIN,
                 .value.builtin = value,
 				.data_type = value.return_type,
+				.loc = token.loc,
             };
             if(expr->value.builtin.return_type == TYPE_VOID) expr->return_type = TYPE_VOID;
         } break;
@@ -821,6 +826,7 @@ Expr *parse_primary(Parser *parser) {
                 *expr = (Expr){
                     .type = EXPR_ARR,
                     .value.array.name = token.value.ident,
+					.loc = token.loc,
                 };
 				Variable arr = get_var(expr->loc, parser, expr->value.array.name);
 				expr->data_type = arr.type;
@@ -854,6 +860,7 @@ Expr *parse_primary(Parser *parser) {
                 *expr = (Expr){
                     .type = EXPR_VAR,
                     .value.variable = token.value.ident,
+					.loc = token.loc,
                 };
 				Variable var = get_var(expr->loc, parser, expr->value.variable);
 				expr->data_type = var.type;

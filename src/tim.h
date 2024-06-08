@@ -926,6 +926,10 @@ void run_instructions(Machine *machine) {
                 memcpy(ptr, &data.word, index);                
             } break;
             case INST_READ: {
+                Data type = pop(machine);
+                if(type.type != INT_TYPE) {
+                    TIM_ERROR("error: expected u8");
+                }
                 Data size = pop(machine);
                 if(size.type != INT_TYPE) {
                     TIM_ERROR("error: expected int");
@@ -940,7 +944,7 @@ void run_instructions(Machine *machine) {
 				uint64_t index = size.word.as_int;		
                 void *ptr = ptr_data.word.as_pointer;
                 Data data = {0};                
-                data.type = INT_TYPE;
+                data.type = type.word.as_int;
                 memcpy(&data.word, ptr, index);                
                 push(machine, data.word, data.type);                
             } break;

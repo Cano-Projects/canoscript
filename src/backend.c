@@ -256,7 +256,7 @@ void gen_write(Program_State *state) {
 void gen_read(Program_State *state) {
 	Inst inst = create_inst(INST_READ, (Word){.as_int=0}, 0);
 	DA_APPEND(&state->machine.instructions, inst);
-    state->stack_s -= 1;
+    state->stack_s -= 2;
 }
     
 void gen_arr_offset(Program_State *state, size_t var_index, Expr *arr_index, Type_Type type) {
@@ -601,6 +601,7 @@ void gen_expr(Program_State *state, Expr *expr) {
             Type_Type type = get_variable_type(state, expr->value.array.name);                        
             gen_arr_offset(state, index, expr->value.array.index, type);
             gen_push(state, data_type_s[type]);
+			gen_push(state, type_to_data[type]);
             gen_read(state);
         } break;
         case EXPR_FIELD_ARR: {
@@ -612,16 +613,27 @@ void gen_expr(Program_State *state, Expr *expr) {
 			Variable var = get_variable(state, expr->value.array.name);
 			gen_arr_offset(state, index, expr->value.array.index, type);
             gen_push(state, data_type_s[type]);
+			gen_push(state, type_to_data[type]);			
             gen_read(state);
 			Struct structure = get_struct(state->structs, var.struct_name).value.structs;
             String_View var_name = expr->value.array.var_name;			
 			gen_field_offset(state, structure, var_name);			
+			gen_push(state, type_to_data[type]);											
             gen_read(state);            
         } break;
         case EXPR_FIELD: {
-            String_View structure = expr->value.field.structure;
+            String_View structure_name = expr->value.field.structure;
             String_View var_name = expr->value.field.var_name;
-            gen_struct_field_offset(state, structure, var_name);
+            gen_struct_field_offset(state, structure_name, var_name);
+		    Variable struct_var = get_variable(state, structure_name);
+			Struct structure = get_struct(state->structs, struct_var.struct_name).value.structs;
+			size_t i;
+			for(i = 0; i < structure.values.count; i++) {
+				if(view_cmp(structure.values.data[i].value.var.name, var_name)) break;
+			}
+			if(!view_cmp(structure.values.data[i].value.var.name, var_name)) 
+				PRINT_ERROR(structure.values.data[0].loc, "error");						
+			gen_push(state, type_to_data[structure.values.data[i].value.var.type]);							
             gen_read(state);            
         } break;
 		case EXPR_EXT: {
