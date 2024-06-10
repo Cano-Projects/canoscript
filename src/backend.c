@@ -574,7 +574,9 @@ void gen_expr(Program_State *state, Expr *expr) {
 			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
 				size += data_type_s[expr->value.structure.values.data[i]->data_type];
 			}
-			gen_struct_alloc(state, size);
+			if(state->machine.instructions.count > 0 && 
+				state->machine.instructions.data[state->machine.instructions.count-1].type != INST_ALLOC) 
+				gen_struct_alloc(state, size);
 			size_t offset = 0;			
 			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
 				gen_structure_field(state, offset, expr->value.structure.values.data[i]);
@@ -810,6 +812,7 @@ void gen_program(Program_State *state, Nodes nodes) {
                     var.stack_pos = ++state->stack_s;
                     var.name = function.args.data[i].value.var.name;
                     var.type = function.args.data[i].value.var.type;
+                    var.struct_name = function.args.data[i].value.var.struct_name;		
                     DA_APPEND(&state->vars, var);    
                 }
                 gen_jmp(state, node->value.func_dec.label);                                
