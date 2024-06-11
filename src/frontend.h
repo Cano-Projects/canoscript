@@ -30,5 +30,6 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack);
 Struct get_structure(Location loc, Parser *parser, String_View name);
 bool is_field(Struct *structure, String_View field);
 bool is_in_function(Blocks *blocks);
+String_View get_cur_function(Blocks *blocks);
 
 #endif // FRONTEND_H

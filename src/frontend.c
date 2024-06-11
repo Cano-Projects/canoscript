@@ -684,9 +684,6 @@ Ext_Func *get_ext_func(Parser *parser, String_View name) {
 }
 
 Variable get_var(Location loc, Parser *parser, String_View name) {
-    for(size_t i = 0; i < parser->symbols.count; i++) {
-        if(parser->symbols.data[i].type == SYMBOL_VAR && view_cmp(parser->symbols.data[i].val.var.name, name)) return parser->symbols.data[i].val.var;
-    }
 	if(is_in_function(parser->blocks)) {
 		ASSERT(parser->functions->count > 0, "Functions are out of wack");
 		Function func = parser->functions->data[parser->functions->count-1];
@@ -694,6 +691,17 @@ Variable get_var(Location loc, Parser *parser, String_View name) {
 			if(view_cmp(func.args.data[i].value.var.name, name)) return func.args.data[i].value.var;
 		}
 	}
+    for(size_t i = 0; i < parser->symbols.count; i++) {
+        if(parser->symbols.data[i].type == SYMBOL_VAR && view_cmp(parser->symbols.data[i].val.var.name, name)) {
+			String_View func = parser->symbols.data[i].val.var.function;
+			if(is_in_function(parser->blocks)) {
+				if(func.data != NULL && view_cmp(get_cur_function(parser->blocks), func))
+					return parser->symbols.data[i].val.var;
+			} else if(func.data == NULL) {
+					return parser->symbols.data[i].val.var;
+			}
+		}
+    }
 // TODO: fix
 	if(loc.filename)
 		PRINT_ERROR(loc, "Unknown variable: "View_Print, View_Arg(name));
@@ -946,6 +954,7 @@ Node parse_var_dec(Parser *parser) {
     Token_Arr *tokens = parser->tokens;
     Node node = {0};
     node.type = TYPE_VAR_DEC;
+	if(is_in_function(parser->blocks)) node.value.var.function = get_cur_function(parser->blocks);
     node.loc = tokens->data[0].loc;
     node.value.var.name = tokens->data[0].value.ident;
 	token_consume(tokens);
@@ -981,7 +990,7 @@ Struct get_structure(Location loc, Parser *parser, String_View name) {
             return parser->symbols.data[i].val.structure;
         }
     }
-    PRINT_ERROR(loc, "unknown struct "View_Print, View_Arg(name));
+    PRINT_ERROR(loc, "very unknown struct "View_Print, View_Arg(name));
 }
 							
 bool is_structure(Parser *parser, String_View name) {
@@ -1008,6 +1017,14 @@ bool is_in_function(Blocks *blocks) {
 	}	
 	return false;
 }
+							
+String_View get_cur_function(Blocks *blocks) {
+	for(size_t i = 0; i < blocks->count; i++) {
+		if(blocks->data[i].type == BLOCK_FUNC) return blocks->data[i].value;			
+	}	
+	return (String_View){0};
+}
+
 				
 int parse_reassign_left(Parser *parser, Node *node) {
     Arena *arena = parser->arena;
