@@ -32,6 +32,8 @@ char *data_typesss[DATA_COUNT] = {
     "U64",                	
 };    
 	
+bool reassigning = false;
+	
 DataType type_to_data[DATA_COUNT] = {
     INT_TYPE,
     PTR_TYPE, 
@@ -574,7 +576,7 @@ void gen_expr(Program_State *state, Expr *expr) {
 			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
 				size += data_type_s[expr->value.structure.values.data[i]->data_type];
 			}
-			if(state->machine.instructions.count > 0 && 
+			if(state->machine.instructions.count > 0 &&
 				state->machine.instructions.data[state->machine.instructions.count-1].type != INST_ALLOC) 
 				gen_struct_alloc(state, size);
 			size_t offset = 0;			
@@ -784,8 +786,11 @@ void gen_program(Program_State *state, Nodes nodes) {
                 String_View structure = node->value.field.structure;
                 String_View var_name = node->value.field.var_name;
                 gen_struct_field_offset(state, structure, var_name);
+	
+				reassigning = true;
                 gen_expr(state, node->value.field.value.data[0]);
-                gen_inswap(state, 1);
+				reassigning = false;
+	 		   gen_inswap(state, 1);
                 gen_write(state);
 				// TODO: MIGHT NEED a GEN_POP HERE
             } break;
