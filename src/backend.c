@@ -703,15 +703,17 @@ void gen_var_dec(Program_State *state, Node *node) {
                gen_write(state);
            }
        } else if(node->value.var.is_struct) {
-			Node cur_struct = get_struct(state->structs, node->value.var.struct_name);		
-			for(size_t i = 0; i < node->value.var.value.data[0]->value.structure.values.count; i++) {
-				node->value.var.value.data[0]->value.structure.name = cur_struct.value.structs.name;
-			}
-			size_t alloc_s = 0;
-			for(size_t i = 0; i < cur_struct.value.structs.values.count; i++) {
-				alloc_s += data_type_s[cur_struct.value.structs.values.data[i].value.var.type];
-			}
-			gen_struct_alloc(state, alloc_s);
+            if(node->value.var.value.data[0]->type != EXPR_FIELD) {
+    			Node cur_struct = get_struct(state->structs, node->value.var.struct_name);		
+    			for(size_t i = 0; i < node->value.var.value.data[0]->value.structure.values.count; i++) {
+    			    node->value.var.value.data[0]->value.structure.name = cur_struct.value.structs.name;
+    			}
+    			size_t alloc_s = 0;
+    			for(size_t i = 0; i < cur_struct.value.structs.values.count; i++) {
+    				alloc_s += data_type_s[cur_struct.value.structs.values.data[i].value.var.type];
+    			}
+    			gen_struct_alloc(state, alloc_s);
+            }
 			gen_expr(state, node->value.var.value.data[0]);
        } else {
            gen_expr(state, node->value.var.value.data[0]);                                    

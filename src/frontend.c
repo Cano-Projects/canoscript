@@ -1145,22 +1145,25 @@ Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack) {
                     } else if(node.value.var.is_struct) { 
 						Expr *expr = parse_expr(&parser);
 						node.value.var.type = TYPE_PTR;
-						if(expr->type != EXPR_FUNCALL) expr->value.structure.name = node.value.var.name;
+						if(expr->type != EXPR_FUNCALL && expr->type != EXPR_FIELD) expr->value.structure.name = node.value.var.name;
+                        //if(expr->type == EXPR_FIELD) expr->value.field.structure = node.value.var.name;
 						if(expr->data_type != TYPE_PTR) {
 									PRINT_ERROR(node.loc, 
 										"expected struct definition but found `%s`", data_types[expr->type].data);
 						}
-						Struct structure = get_structure(node.loc, &parser, node.value.var.struct_name);
-						for(size_t i = 0; i < expr->value.structure.values.count; i++) {
-							Expr *field = expr->value.structure.values.data[i];
-							if(!is_valid_types(
-											field->data_type,
-											structure.values.data[i].value.var.type)) {
-								PRINT_ERROR(node.loc, "expression does not match the type of field `"
-															View_Print"`", View_Arg(structure.values.data[i].value.var.name));														
-							}
-							field->data_type = structure.values.data[i].value.var.type;
-						}
+                        if(expr->type != EXPR_FIELD) {
+    						Struct structure = get_structure(node.loc, &parser, node.value.var.struct_name);                                                
+    						for(size_t i = 0; i < expr->value.structure.values.count; i++) {
+    							Expr *field = expr->value.structure.values.data[i];
+    							if(!is_valid_types(
+    											field->data_type,
+    											structure.values.data[i].value.var.type)) {
+    								PRINT_ERROR(node.loc, "expression does not match the type of field `"
+    															View_Print"`", View_Arg(structure.values.data[i].value.var.name));														
+    							}
+    							field->data_type = structure.values.data[i].value.var.type;
+    						}
+                        }
 						ADA_APPEND(parser.arena, &node.value.var.value, expr);
                     } else {
 						Expr *expr = parse_expr(&parser);
