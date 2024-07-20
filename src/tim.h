@@ -287,9 +287,11 @@ void print_stack(Machine *machine);
 void write_program_to_file(Machine *machine, char *file_path);
 Machine *read_program_from_file(Machine *machine, char *file_path);
 void machine_disasm(Machine *machine);
+void machine_debug(Machine *machine);
 void machine_free(Machine *machine);
 void machine_load_native(Machine *machine, native ptr);
 void run_instructions(Machine *machine);
+void run_instruction(Machine *machine, Inst instruction, size_t ip);
 
 
 #endif // TIM_H
@@ -825,6 +827,101 @@ void machine_disasm(Machine *machine) {
 	}
 }
 
+void machine_debug(Machine *machine) {
+	machine_load_native(machine, native_write);
+	machine_load_native(machine, native_exit);
+    size_t i = machine->entrypoint;
+    bool printed = false;
+	while(i < machine->program_size) {
+        if(!printed) {
+    		printf("%s", instructions[machine->instructions.data[i].type]);
+    		if(has_operand[machine->instructions.data[i].type]) {
+    			putc(' ', stdout);
+    			switch(machine->instructions.data[i].data_type) {
+    				case INT_TYPE: {
+    					int64_t value = machine->instructions.data[i].value.as_int;				
+    					if(machine->instructions.data[i].type == INST_PUSH_STR) {
+    						String_View string = machine->str_stack.data[value];
+    						putc('"', stdout);
+    						for(size_t j = 0; j < string.len-1; j++) {
+    							handle_char_print(string.data[j]);
+    						}
+    						putc('"', stdout);
+    						break;
+    					}
+    					printf("%ld", value);				
+    				} break;
+    				case FLOAT_TYPE: {
+    					printf("%f", machine->instructions.data[i].value.as_float);				
+    				} break;
+    				case CHAR_TYPE: {
+    					putc('\'', stdout);
+    					handle_char_print(machine->instructions.data[i].value.as_char);
+    					putc('\'', stdout);
+    				} break;				
+    				case PTR_TYPE: {
+    					printf("%p", machine->instructions.data[i].value.as_pointer);				
+    				} break;
+    				default:
+    					assert(false && "UNREACHABLE");
+    			}
+    		}
+    		putc('\n', stdout);    
+        }
+        printed = true;
+        putc('>', stdout);
+
+        char command = fgetc(stdin);
+        if(command == EOF) {
+            TIM_ERROR("could not read stdin");
+        }
+        
+        switch(command) {
+            case 'n':
+                run_instruction(machine, machine->instructions.data[i], i);        
+                i++;
+                printed = false;
+                break;
+            case 'p': {
+                char size_str[128] = {0};
+                if(fgets(size_str, 128, stdin) == NULL) {
+                    TIM_ERROR("could not read stdin");
+                }
+                int size = atoi(size_str);   
+                if(size > machine->stack_size) {
+                    TIM_ERROR("can not print %d elements, the stack only has %d\n", size, machine->stack_size);
+                }
+    
+                for(size_t index = 0; (int)index < size; index++) {
+                    size_t cur = machine->stack_size - index - 1;
+                    printf("index %zu: ", index);
+                    Data element = machine->stack[cur];                
+        			switch(element.type) {
+        				case INT_TYPE: {
+        					int64_t value = element.word.as_int;				
+        					printf("%ld", value);				
+        				} break;
+        				case FLOAT_TYPE: {
+        					printf("%f", element.word.as_float);				
+        				} break;
+        				case CHAR_TYPE: {
+        					putc('\'', stdout);
+        					handle_char_print(element.word.as_char);
+        					putc('\'', stdout);
+        				} break;				
+        				case PTR_TYPE: {
+        					printf("%p", element.word.as_pointer);				
+        				} break;
+        				default:
+        					assert(false && "UNREACHABLE");
+        			}
+                    putc('\n', stdout);
+                }
+            } break;
+        }
+	}
+}
+
 void machine_free(Machine *machine) {
 	Memory *cur = machine->memory;
 	while(cur != NULL) {
@@ -841,609 +938,612 @@ void machine_load_native(Machine *machine, native ptr) {
 	machine->native_ptrs[machine->native_ptrs_s++] = ptr;	
 }
 
+void run_instruction(Machine *machine, Inst instruction, size_t ip) {
+    Data a, b;
+    switch(instruction.type){
+        case INST_NOP:
+            break;
+        case INST_PUSH:
+            if(machine->instructions.data[ip].data_type == REGISTER_TYPE){
+                push(machine, machine->registers[machine->instructions.data[ip].register_index].data, 
+                     machine->registers[machine->instructions.data[ip].register_index].data_type);
+            } else {
+                push(machine, machine->instructions.data[ip].value, machine->instructions.data[ip].data_type);
+            }
+            break;
+        case INST_PUSH_STR: {
+            size_t index = machine->instructions.data[ip].value.as_int;
+            String_View str = machine->str_stack.data[index];
+            insert_memory(machine, str.len+1);
+            for(size_t i = 0; i < str.len; i++) {
+                machine->memory->cell.data[i] = str.data[i];
+            }
+machine->memory->cell.data[str.len] = '\0';
+            Word word;
+            word.as_pointer = machine->memory->cell.data;
+            push(machine, word, PTR_TYPE);
+        } break;
+        case INST_MOV:
+            if(machine->instructions.data[ip].data_type == TOP_TYPE){
+                machine->registers[machine->instructions.data[ip].register_index].data = machine->stack[machine->stack_size - 1].word;
+                machine->registers[machine->instructions.data[ip].register_index].data_type = machine->stack[machine->stack_size - 1].type;
+            } else {
+                machine->registers[machine->instructions.data[ip].register_index].data = machine->instructions.data[ip].value;
+                machine->registers[machine->instructions.data[ip].register_index].data_type = machine->instructions.data[ip].data_type;
+            }
+            break;
+        case INST_REF: {
+            Word *ptr = &machine->stack[machine->stack_size - 1].word;
+            push_ptr(machine, ptr);
+        } break;
+        case INST_DEREF: {
+            Word *ptr = machine->stack[machine->stack_size - 1].word.as_pointer;
+            Data *ref = (Data*)ptr;
+            push(machine, ref->word, ref->type);
+            break;
+        }
+        case INST_ALLOC: {
+            a = pop(machine);
+            if(a.type != INT_TYPE) {
+                TIM_ERROR("error: expected int");
+            }
+uint64_t val = a.word.as_int;
+            insert_memory(machine, val);
+            Word word;
+            word.as_pointer = machine->memory->cell.data;
+            push(machine, word, PTR_TYPE);
+        } break;
+        case INST_DEALLOC: {
+            Data ptr = pop(machine);
+            if(ptr.type != PTR_TYPE) {
+                TIM_ERROR("error: expected ptr");
+            }
+            free_memory(machine, ptr.word.as_pointer);
+        } break;
+        case INST_WRITE: {
+            Data size = pop(machine);                
+            Data data = pop(machine);
+            if(size.type != INT_TYPE) {
+                TIM_ERROR("error: expected int");                    
+            }
+            if(size.word.as_int < 0) {
+                TIM_ERROR("error: size cannot be negative");                    
+            }
+            Data ptr_data = pop(machine);
+            if(ptr_data.type != PTR_TYPE) {
+                TIM_ERROR("error: expected ptr");                    
+            }
+uint64_t index = size.word.as_int;
+            void *ptr = ptr_data.word.as_pointer;
+            memcpy(ptr, &data.word, index);                
+        } break;
+        case INST_READ: {
+            Data type = pop(machine);
+            if(type.type != INT_TYPE) {
+                TIM_ERROR("error: expected u8");
+            }
+            Data size = pop(machine);
+            if(size.type != INT_TYPE) {
+                TIM_ERROR("error: expected int");
+            }
+            if(size.word.as_int < 0) {
+                TIM_ERROR("error: size cannot be negative");                    
+            }
+            Data ptr_data = pop(machine);
+            if(ptr_data.type != PTR_TYPE) {
+                TIM_ERROR("error: expected pointer");
+            }
+uint64_t index = size.word.as_int;		
+            void *ptr = ptr_data.word.as_pointer;
+            Data data = {0};                
+            data.type = type.word.as_int;
+            memcpy(&data.word, ptr, index);                
+            push(machine, data.word, data.type);                
+        } break;
+        case INST_POP:
+            pop(machine);
+            break;
+        case INST_DUP:
+            a = machine->stack[machine->stack_size - 1];
+            push(machine, a.word, a.type);
+            break;
+        case INST_INDUP: {
+Data index = pop(machine);
+if(index.type != INT_TYPE) {
+	TIM_ERROR("error: expected int");
+}
+            index_dup(machine, machine->stack_size-index.word.as_int-1);
+        } break;
+        case INST_SWAP: {
+            Data temp = machine->stack[machine->stack_size - 1];
+            machine->stack[machine->stack_size - 1] = machine->stack[machine->stack_size - 2];
+            machine->stack[machine->stack_size - 2] = temp;
+        } break;
+        case INST_INSWAP: {
+Data index = pop(machine);
+if(index.type != INT_TYPE) {
+	TIM_ERROR("error: expected int");
+}
+            index_swap(machine, machine->stack_size-index.word.as_int-1);
+        } break;
+        case INST_ADD:
+if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
+            b = machine->stack[machine->stack_size - 1];
+            a = machine->stack[machine->stack_size - 2];
+            machine->stack_size -= 2;
+switch(a.type) {
+	case PTR_TYPE:
+                case U64_TYPE:
+                    TYPE_OP(as_u64, U64_TYPE, +);
+                    break;
+	case CHAR_TYPE:
+                case U8_TYPE:
+                    TYPE_OP(as_u8, U8_TYPE, +);
+                    break;
+                case U16_TYPE:
+                    TYPE_OP(as_u16, U16_TYPE, +);
+                    break;
+                case U32_TYPE:
+                    TYPE_OP(as_u32, U32_TYPE, +);
+                    break;
+	case INT_TYPE:
+                    TYPE_OP(as_int, INT_TYPE, +);
+		break;
+	case FLOAT_TYPE:
+                    TYPE_OP(as_float, FLOAT_TYPE, +);
+		break;
+	case DOUBLE_TYPE:
+                    TYPE_OP(as_double, DOUBLE_TYPE, +);
+		break;
+	default:
+		TIM_ERROR("error: not right...\n");
+}
+            break;
+        case INST_SUB:
+if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
+            b = machine->stack[machine->stack_size - 1];
+            a = machine->stack[machine->stack_size - 2];
+            machine->stack_size -= 2;
+switch(a.type) {
+	case PTR_TYPE:
+                case U64_TYPE:
+                    TYPE_OP(as_u64, U64_TYPE, -);
+                    break;
+	case CHAR_TYPE:
+                case U8_TYPE:
+                    TYPE_OP(as_u8, U8_TYPE, -);
+                    break;
+                case U16_TYPE:
+                    TYPE_OP(as_u16, U16_TYPE, -);
+                    break;
+                case U32_TYPE:
+                    TYPE_OP(as_u32, U32_TYPE, -);
+                    break;
+	case INT_TYPE:
+                    TYPE_OP(as_int, INT_TYPE, -);
+		break;
+	case FLOAT_TYPE:
+                    TYPE_OP(as_float, FLOAT_TYPE, -);
+		break;
+	case DOUBLE_TYPE:
+                    TYPE_OP(as_double, DOUBLE_TYPE, -);
+		break;
+	default:
+		TIM_ERROR("error: not right...\n");
+}
+            break;
+        case INST_MUL:
+if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
+            b = machine->stack[machine->stack_size - 1];
+            a = machine->stack[machine->stack_size - 2];
+            machine->stack_size -= 2;
+switch(a.type) {
+	case PTR_TYPE:
+                case U64_TYPE:
+                    TYPE_OP(as_u64, U64_TYPE, *);
+                    break;
+	case CHAR_TYPE:
+                case U8_TYPE:
+                    TYPE_OP(as_u8, U8_TYPE, *);
+                    break;
+                case U16_TYPE:
+                    TYPE_OP(as_u16, U16_TYPE, *);
+                    break;
+                case U32_TYPE:
+                    TYPE_OP(as_u32, U32_TYPE, *);
+                    break;
+	case INT_TYPE:
+                    TYPE_OP(as_int, INT_TYPE, *);
+		break;
+	case FLOAT_TYPE:
+                    TYPE_OP(as_float, FLOAT_TYPE, *);
+		break;
+	case DOUBLE_TYPE:
+                    TYPE_OP(as_double, DOUBLE_TYPE, *);
+		break;
+	default:
+		TIM_ERROR("error: not right...\n");
+}
+            break;
+        case INST_DIV:
+if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
+            if(machine->stack[machine->stack_size - 1].word.as_int == 0) TIM_ERROR("error: cannot divide by 0\n");
+            b = machine->stack[machine->stack_size - 1];
+            a = machine->stack[machine->stack_size - 2];
+            machine->stack_size -= 2;
+switch(a.type) {
+	case PTR_TYPE:
+                case U64_TYPE:
+                    TYPE_OP(as_u64, U64_TYPE, /);
+                    break;
+	case CHAR_TYPE:
+                case U8_TYPE:
+                    TYPE_OP(as_u8, U8_TYPE, /);
+                    break;
+                case U16_TYPE:
+                    TYPE_OP(as_u16, U16_TYPE, /);
+                    break;
+                case U32_TYPE:
+                    TYPE_OP(as_u32, U32_TYPE, /);
+                    break;
+	case INT_TYPE:
+                    TYPE_OP(as_int, INT_TYPE, /);
+		break;
+	case FLOAT_TYPE:
+                    TYPE_OP(as_float, FLOAT_TYPE, /);
+		break;
+	case DOUBLE_TYPE:
+                    TYPE_OP(as_double, DOUBLE_TYPE, /);
+		break;
+	default:
+		TIM_ERROR("error: not right...\n");
+}
+            break;
+        case INST_MOD:
+if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
+            if(machine->stack[machine->stack_size - 1].word.as_int == 0) TIM_ERROR("error: cannot divide by 0\n");
+            MATH_OP(as_int, %, INT_TYPE);
+            break;
+        case INST_AND:
+if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
+            MATH_OP(as_int, &&, INT_TYPE);
+            break;
+        case INST_OR:
+if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
+            MATH_OP(as_int, ||, INT_TYPE);
+            break;
+        case INST_ADD_F:
+            MATH_OP(as_float, +, FLOAT_TYPE);
+            break;
+        case INST_SUB_F:
+            MATH_OP(as_float, -, FLOAT_TYPE);
+            break;
+        case INST_MUL_F:
+            MATH_OP(as_float, *, FLOAT_TYPE);
+            break;
+        case INST_DIV_F:
+            if(machine->stack[machine->stack_size - 1].word.as_float == 0.0){
+                TIM_ERROR("error: cannot divide by 0\n");
+            }
+            MATH_OP(as_float, /, FLOAT_TYPE);
+            break;
+        case INST_MOD_F:
+            if(machine->stack[machine->stack_size - 1].word.as_float == 0.0){
+                TIM_ERROR("error: cannot divide by 0\n");
+            }
+            b = pop(machine);
+            a = pop(machine);
+            Word c = {.as_float=my_fmod(a.word.as_float, b.word.as_float)};
+            push(machine, c, FLOAT_TYPE);
+            break;
+        case INST_CMPE: {
+            b = machine->stack[machine->stack_size - 1];
+            a = machine->stack[machine->stack_size - 2];
+            machine->stack_size -= 2;
+switch(a.type) {
+	case PTR_TYPE:
+                case U64_TYPE:
+                    TYPE_OP(as_u64, U64_TYPE, ==);
+                    break;
+	case CHAR_TYPE:
+                case U8_TYPE:
+                    TYPE_OP(as_u8, U8_TYPE, ==);
+                    break;
+                case U16_TYPE:
+                    TYPE_OP(as_u16, U16_TYPE, ==);
+                    break;
+                case U32_TYPE:
+                    TYPE_OP(as_u32, U32_TYPE, ==);
+                    break;
+	case INT_TYPE:
+                    TYPE_OP(as_int, INT_TYPE, ==);
+		break;
+	case FLOAT_TYPE:
+                    TYPE_OP(as_float, FLOAT_TYPE, ==);
+		break;
+	case DOUBLE_TYPE:
+                    TYPE_OP(as_double, DOUBLE_TYPE, ==);
+		break;
+	default:
+		TIM_ERROR("error: not right...\n");
+}
+        } break;
+        case INST_CMPNE: {
+            b = machine->stack[machine->stack_size - 1];
+            a = machine->stack[machine->stack_size - 2];
+            machine->stack_size -= 2;
+switch(a.type) {
+	case PTR_TYPE:
+                case U64_TYPE:
+                    TYPE_OP(as_u64, U64_TYPE, !=);
+                    break;
+	case CHAR_TYPE:
+                case U8_TYPE:
+                    TYPE_OP(as_u8, U8_TYPE, !=);
+                    break;
+                case U16_TYPE:
+                    TYPE_OP(as_u16, U16_TYPE, !=);
+                    break;
+                case U32_TYPE:
+                    TYPE_OP(as_u32, U32_TYPE, !=);
+                    break;
+	case INT_TYPE:
+                    TYPE_OP(as_int, INT_TYPE, !=);
+		break;
+	case FLOAT_TYPE:
+                    TYPE_OP(as_float, FLOAT_TYPE, !=);
+		break;
+	case DOUBLE_TYPE:
+                    TYPE_OP(as_double, DOUBLE_TYPE, !=);
+		break;
+	default:
+		TIM_ERROR("error: not right...\n");
+}
+        } break;
+        case INST_CMPG: {
+            b = machine->stack[machine->stack_size - 1];
+            a = machine->stack[machine->stack_size - 2];
+            machine->stack_size -= 2;
+switch(a.type) {
+	case PTR_TYPE:
+                case U64_TYPE:
+                    TYPE_OP(as_u64, U64_TYPE, >);
+                    break;
+	case CHAR_TYPE:
+                case U8_TYPE:
+                    TYPE_OP(as_u8, U8_TYPE, >);
+                    break;
+                case U16_TYPE:
+                    TYPE_OP(as_u16, U16_TYPE, >);
+                    break;
+                case U32_TYPE:
+                    TYPE_OP(as_u32, U32_TYPE, >);
+                    break;
+	case INT_TYPE:
+                    TYPE_OP(as_int, INT_TYPE, >);
+		break;
+	case FLOAT_TYPE:
+                    TYPE_OP(as_float, FLOAT_TYPE, >);
+		break;
+	case DOUBLE_TYPE:
+                    TYPE_OP(as_double, DOUBLE_TYPE, >);
+		break;
+	default:
+		TIM_ERROR("error: not right...\n");
+}
+        } break;
+        case INST_CMPL: {
+            b = machine->stack[machine->stack_size - 1];
+            a = machine->stack[machine->stack_size - 2];
+            machine->stack_size -= 2;
+switch(a.type) {
+	case PTR_TYPE:
+                case U64_TYPE:
+                    TYPE_OP(as_u64, U64_TYPE, <);
+                    break;
+	case CHAR_TYPE:
+                case U8_TYPE:
+                    TYPE_OP(as_u8, U8_TYPE, <);
+                    break;
+                case U16_TYPE:
+                    TYPE_OP(as_u16, U16_TYPE, <);
+                    break;
+                case U32_TYPE:
+                    TYPE_OP(as_u32, U32_TYPE, <);
+                    break;
+	case INT_TYPE:
+                    TYPE_OP(as_int, INT_TYPE, <);
+		break;
+	case FLOAT_TYPE:
+                    TYPE_OP(as_float, FLOAT_TYPE, <);
+		break;
+	case DOUBLE_TYPE:
+                    TYPE_OP(as_double, DOUBLE_TYPE, <);
+		break;
+	default:
+		TIM_ERROR("error: not right...\n");
+}
+        } break;
+        case INST_CMPGE: {
+            b = machine->stack[machine->stack_size - 1];
+            a = machine->stack[machine->stack_size - 2];
+            machine->stack_size -= 2;
+switch(a.type) {
+	case PTR_TYPE:
+                case U64_TYPE:
+                    TYPE_OP(as_u64, U64_TYPE, >=);
+                    break;
+	case CHAR_TYPE:
+                case U8_TYPE:
+                    TYPE_OP(as_u8, U8_TYPE, >=);
+                    break;
+                case U16_TYPE:
+                    TYPE_OP(as_u16, U16_TYPE, >=);
+                    break;
+                case U32_TYPE:
+                    TYPE_OP(as_u32, U32_TYPE, >=);
+                    break;
+	case INT_TYPE:
+                    TYPE_OP(as_int, INT_TYPE, >=);
+		break;
+	case FLOAT_TYPE:
+                    TYPE_OP(as_float, FLOAT_TYPE, >=);
+		break;
+	case DOUBLE_TYPE:
+                    TYPE_OP(as_double, DOUBLE_TYPE, >=);
+		break;
+	default:
+		TIM_ERROR("error: not right...\n");
+}
+        } break;
+        case INST_CMPLE: {
+            b = machine->stack[machine->stack_size - 1];
+            a = machine->stack[machine->stack_size - 2];
+            machine->stack_size -= 2;
+switch(a.type) {
+	case PTR_TYPE:
+                case U64_TYPE:
+                    TYPE_OP(as_u64, U64_TYPE, <=);
+                    break;
+	case CHAR_TYPE:
+                case U8_TYPE:
+                    TYPE_OP(as_u8, U8_TYPE, <=);
+                    break;
+                case U16_TYPE:
+                    TYPE_OP(as_u16, U16_TYPE, <=);
+                    break;
+                case U32_TYPE:
+                    TYPE_OP(as_u32, U32_TYPE, <=);
+                    break;
+	case INT_TYPE:
+                    TYPE_OP(as_int, INT_TYPE, <=);
+		break;
+	case FLOAT_TYPE:
+                    TYPE_OP(as_float, FLOAT_TYPE, <=);
+		break;
+	case DOUBLE_TYPE:
+                    TYPE_OP(as_double, DOUBLE_TYPE, <=);
+		break;
+	default:
+		TIM_ERROR("error: not right...\n");
+}
+        } break;
+        case INST_ITOF:
+            a = pop(machine);
+            a.word.as_float = (double)a.word.as_int; 
+            push(machine, a.word, FLOAT_TYPE);
+            break;
+        case INST_FTOI:
+            a = pop(machine);
+            a.word.as_int = (int64_t)a.word.as_float;
+            push(machine, a.word, INT_TYPE);
+            break;
+        case INST_ITOC:
+            a = pop(machine);
+            a.word.as_char = (char)a.word.as_int;
+            push(machine, a.word, CHAR_TYPE);
+            break;
+        case INST_TOI:
+            machine->stack[machine->stack_size-1].type = INT_TYPE;
+            break;
+        case INST_TOF:
+            machine->stack[machine->stack_size-1].type = FLOAT_TYPE;            
+            break;
+        case INST_TOC:
+            machine->stack[machine->stack_size-1].type = CHAR_TYPE;            
+            break;
+        case INST_TOVP:
+            machine->stack[machine->stack_size-1].type = PTR_TYPE;            
+            break;
+        case INST_CALL:
+            machine->return_stack[machine->return_stack_size++] = ip;
+            ip = machine->instructions.data[ip].value.as_int - 1;
+            break;
+        case INST_RET:
+            ip = machine->return_stack[--machine->return_stack_size];
+            break;
+        case INST_JMP:
+if(machine->instructions.data[ip].value.as_int == 0) TIM_ERROR("error: cannot jump to 0\n");
+            ip = machine->instructions.data[ip].value.as_int - 1;
+            if(ip + 1 >= machine->program_size){
+                TIM_ERROR("error: cannot jmp out of bounds to: %ld\n", machine->instructions.data[ip].value.as_int);
+            }
+            break;
+        case INST_ZJMP:
+if(machine->instructions.data[ip].value.as_int == 0) TIM_ERROR("error: cannot jump to 0\n");					
+            if(pop(machine).word.as_int == 0){
+                ip = machine->instructions.data[ip].value.as_int - 1;
+                if(ip + 1 >= machine->program_size){
+                 TIM_ERROR("error: cannot zjmp out of bounds to: %ld\n", machine->instructions.data[ip].value.as_int);							
+                }
+            } else {
+                break;
+            }
+            break;
+        case INST_NZJMP:
+if(machine->instructions.data[ip].value.as_int == 0) TIM_ERROR("error: cannot jump to 0\n");					
+            if(pop(machine).word.as_int != 0){
+                ip = machine->instructions.data[ip].value.as_int - 1;
+                if(ip + 1 >= machine->program_size){
+                 TIM_ERROR("error: cannot nzjmp out of bounds to: %ld\n", machine->instructions.data[ip].value.as_int);														
+                }
+            } else {
+                break;
+            }
+            break;
+        case INST_PRINT:
+            a = pop(machine);
+            printf("as float: %f, as int: %ld, as char: %c, as pointer: %p, type: %s\n",
+                    a.word.as_float, a.word.as_int, a.word.as_char, a.word.as_pointer, str_types[a.type]);
+            break;
+        case INST_SS:
+            push(machine, (Word){.as_int=machine->stack_size}, INT_TYPE);
+            break;
+        case INST_NATIVE: {
+            machine->native_ptrs[machine->instructions.data[ip].value.as_int](machine);
+        } break;
+        case INST_ENTRYPOINT:
+            assert(false);
+            break;
+        case INST_HALT:
+            ip = machine->program_size;
+            break;
+    case INST_LOAD_LIBRARY: {
+    char *lib_name = (char*)pop(machine).word.as_pointer;			
+    char *func_name = (char*)pop(machine).word.as_pointer;		
+    void *lib = dlopen(lib_name, RTLD_LAZY);		
+    if(!lib) {
+    	fprintf(stderr, "error loading lib: %s\n", dlerror());
+    	exit(1);
+    }
+    native func;
+    *(void**)(&func) = dlsym(lib, func_name);				
+    machine_load_native(machine, func);
+    // WIP FIX THIS
+    /*
+    while(func_name[0] != '\0') {
+    	native func;				
+    	*(void**)(&func) = dlsym(lib, func_name);							
+    	if(!func) {
+    		fprintf(stderr, "error loading function: %s\n", dlerror());
+    		exit(1);
+    	}
+    	machine_load_native(machine, func);
+    	func_name = (char*)pop(machine).word.as_pointer;						
+    }
+    */
+    } break;
+        case INST_COUNT:
+            assert(false);
+    }
+}
+
+
 void run_instructions(Machine *machine) {
 	machine_load_native(machine, native_write);
 	machine_load_native(machine, native_exit);
-    Data a, b;
     for(size_t ip = machine->entrypoint; ip < machine->program_size; ip++){
-        //print_stack(machine);
-        switch(machine->instructions.data[ip].type){
-            case INST_NOP:
-                continue;
-                break;
-            case INST_PUSH:
-                if(machine->instructions.data[ip].data_type == REGISTER_TYPE){
-                    push(machine, machine->registers[machine->instructions.data[ip].register_index].data, 
-                         machine->registers[machine->instructions.data[ip].register_index].data_type);
-                } else {
-                    push(machine, machine->instructions.data[ip].value, machine->instructions.data[ip].data_type);
-                }
-                break;
-            case INST_PUSH_STR: {
-                size_t index = machine->instructions.data[ip].value.as_int;
-                String_View str = machine->str_stack.data[index];
-                insert_memory(machine, str.len+1);
-                for(size_t i = 0; i < str.len; i++) {
-                    machine->memory->cell.data[i] = str.data[i];
-                }
-				machine->memory->cell.data[str.len] = '\0';
-                Word word;
-                word.as_pointer = machine->memory->cell.data;
-                push(machine, word, PTR_TYPE);
-            } break;
-            case INST_MOV:
-                if(machine->instructions.data[ip].data_type == TOP_TYPE){
-                    machine->registers[machine->instructions.data[ip].register_index].data = machine->stack[machine->stack_size - 1].word;
-                    machine->registers[machine->instructions.data[ip].register_index].data_type = machine->stack[machine->stack_size - 1].type;
-                } else {
-                    machine->registers[machine->instructions.data[ip].register_index].data = machine->instructions.data[ip].value;
-                    machine->registers[machine->instructions.data[ip].register_index].data_type = machine->instructions.data[ip].data_type;
-                }
-                break;
-            case INST_REF: {
-                Word *ptr = &machine->stack[machine->stack_size - 1].word;
-                push_ptr(machine, ptr);
-            } break;
-            case INST_DEREF: {
-                Word *ptr = machine->stack[machine->stack_size - 1].word.as_pointer;
-                Data *ref = (Data*)ptr;
-                push(machine, ref->word, ref->type);
-                break;
-            }
-            case INST_ALLOC: {
-                a = pop(machine);
-                if(a.type != INT_TYPE) {
-                    TIM_ERROR("error: expected int");
-                }
-				uint64_t val = a.word.as_int;
-                insert_memory(machine, val);
-                Word word;
-                word.as_pointer = machine->memory->cell.data;
-                push(machine, word, PTR_TYPE);
-            } break;
-            case INST_DEALLOC: {
-                Data ptr = pop(machine);
-                if(ptr.type != PTR_TYPE) {
-                    TIM_ERROR("error: expected ptr");
-                }
-                free_memory(machine, ptr.word.as_pointer);
-            } break;
-            case INST_WRITE: {
-                Data size = pop(machine);                
-                Data data = pop(machine);
-                if(size.type != INT_TYPE) {
-                    TIM_ERROR("error: expected int");                    
-                }
-                if(size.word.as_int < 0) {
-                    TIM_ERROR("error: size cannot be negative");                    
-                }
-                Data ptr_data = pop(machine);
-                if(ptr_data.type != PTR_TYPE) {
-                    TIM_ERROR("error: expected ptr");                    
-                }
-				uint64_t index = size.word.as_int;
-                void *ptr = ptr_data.word.as_pointer;
-                memcpy(ptr, &data.word, index);                
-            } break;
-            case INST_READ: {
-                Data type = pop(machine);
-                if(type.type != INT_TYPE) {
-                    TIM_ERROR("error: expected u8");
-                }
-                Data size = pop(machine);
-                if(size.type != INT_TYPE) {
-                    TIM_ERROR("error: expected int");
-                }
-                if(size.word.as_int < 0) {
-                    TIM_ERROR("error: size cannot be negative");                    
-                }
-                Data ptr_data = pop(machine);
-                if(ptr_data.type != PTR_TYPE) {
-                    TIM_ERROR("error: expected pointer");
-                }
-				uint64_t index = size.word.as_int;		
-                void *ptr = ptr_data.word.as_pointer;
-                Data data = {0};                
-                data.type = type.word.as_int;
-                memcpy(&data.word, ptr, index);                
-                push(machine, data.word, data.type);                
-            } break;
-            case INST_POP:
-                pop(machine);
-                break;
-            case INST_DUP:
-                a = machine->stack[machine->stack_size - 1];
-                push(machine, a.word, a.type);
-                break;
-            case INST_INDUP: {
-				Data index = pop(machine);
-				if(index.type != INT_TYPE) {
-					TIM_ERROR("error: expected int");
-				}
-                index_dup(machine, machine->stack_size-index.word.as_int-1);
-            } break;
-            case INST_SWAP: {
-                Data temp = machine->stack[machine->stack_size - 1];
-                machine->stack[machine->stack_size - 1] = machine->stack[machine->stack_size - 2];
-                machine->stack[machine->stack_size - 2] = temp;
-            } break;
-            case INST_INSWAP: {
-				Data index = pop(machine);
-				if(index.type != INT_TYPE) {
-					TIM_ERROR("error: expected int");
-				}
-                index_swap(machine, machine->stack_size-index.word.as_int-1);
-            } break;
-            case INST_ADD:
-				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
-                b = machine->stack[machine->stack_size - 1];
-                a = machine->stack[machine->stack_size - 2];
-                machine->stack_size -= 2;
-				switch(a.type) {
-					case PTR_TYPE:
-                    case U64_TYPE:
-                        TYPE_OP(as_u64, U64_TYPE, +);
-                        break;
-					case CHAR_TYPE:
-                    case U8_TYPE:
-                        TYPE_OP(as_u8, U8_TYPE, +);
-                        break;
-                    case U16_TYPE:
-                        TYPE_OP(as_u16, U16_TYPE, +);
-                        break;
-                    case U32_TYPE:
-                        TYPE_OP(as_u32, U32_TYPE, +);
-                        break;
-					case INT_TYPE:
-                        TYPE_OP(as_int, INT_TYPE, +);
-						break;
-					case FLOAT_TYPE:
-                        TYPE_OP(as_float, FLOAT_TYPE, +);
-						break;
-					case DOUBLE_TYPE:
-                        TYPE_OP(as_double, DOUBLE_TYPE, +);
-						break;
-					default:
-						TIM_ERROR("error: not right...\n");
-				}
-                break;
-            case INST_SUB:
-				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
-                b = machine->stack[machine->stack_size - 1];
-                a = machine->stack[machine->stack_size - 2];
-                machine->stack_size -= 2;
-				switch(a.type) {
-					case PTR_TYPE:
-                    case U64_TYPE:
-                        TYPE_OP(as_u64, U64_TYPE, -);
-                        break;
-					case CHAR_TYPE:
-                    case U8_TYPE:
-                        TYPE_OP(as_u8, U8_TYPE, -);
-                        break;
-                    case U16_TYPE:
-                        TYPE_OP(as_u16, U16_TYPE, -);
-                        break;
-                    case U32_TYPE:
-                        TYPE_OP(as_u32, U32_TYPE, -);
-                        break;
-					case INT_TYPE:
-                        TYPE_OP(as_int, INT_TYPE, -);
-						break;
-					case FLOAT_TYPE:
-                        TYPE_OP(as_float, FLOAT_TYPE, -);
-						break;
-					case DOUBLE_TYPE:
-                        TYPE_OP(as_double, DOUBLE_TYPE, -);
-						break;
-					default:
-						TIM_ERROR("error: not right...\n");
-				}
-                break;
-            case INST_MUL:
-				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
-                b = machine->stack[machine->stack_size - 1];
-                a = machine->stack[machine->stack_size - 2];
-                machine->stack_size -= 2;
-				switch(a.type) {
-					case PTR_TYPE:
-                    case U64_TYPE:
-                        TYPE_OP(as_u64, U64_TYPE, *);
-                        break;
-					case CHAR_TYPE:
-                    case U8_TYPE:
-                        TYPE_OP(as_u8, U8_TYPE, *);
-                        break;
-                    case U16_TYPE:
-                        TYPE_OP(as_u16, U16_TYPE, *);
-                        break;
-                    case U32_TYPE:
-                        TYPE_OP(as_u32, U32_TYPE, *);
-                        break;
-					case INT_TYPE:
-                        TYPE_OP(as_int, INT_TYPE, *);
-						break;
-					case FLOAT_TYPE:
-                        TYPE_OP(as_float, FLOAT_TYPE, *);
-						break;
-					case DOUBLE_TYPE:
-                        TYPE_OP(as_double, DOUBLE_TYPE, *);
-						break;
-					default:
-						TIM_ERROR("error: not right...\n");
-				}
-                break;
-            case INST_DIV:
-				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
-                if(machine->stack[machine->stack_size - 1].word.as_int == 0) TIM_ERROR("error: cannot divide by 0\n");
-                b = machine->stack[machine->stack_size - 1];
-                a = machine->stack[machine->stack_size - 2];
-                machine->stack_size -= 2;
-				switch(a.type) {
-					case PTR_TYPE:
-                    case U64_TYPE:
-                        TYPE_OP(as_u64, U64_TYPE, /);
-                        break;
-					case CHAR_TYPE:
-                    case U8_TYPE:
-                        TYPE_OP(as_u8, U8_TYPE, /);
-                        break;
-                    case U16_TYPE:
-                        TYPE_OP(as_u16, U16_TYPE, /);
-                        break;
-                    case U32_TYPE:
-                        TYPE_OP(as_u32, U32_TYPE, /);
-                        break;
-					case INT_TYPE:
-                        TYPE_OP(as_int, INT_TYPE, /);
-						break;
-					case FLOAT_TYPE:
-                        TYPE_OP(as_float, FLOAT_TYPE, /);
-						break;
-					case DOUBLE_TYPE:
-                        TYPE_OP(as_double, DOUBLE_TYPE, /);
-						break;
-					default:
-						TIM_ERROR("error: not right...\n");
-				}
-                break;
-            case INST_MOD:
-				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
-                if(machine->stack[machine->stack_size - 1].word.as_int == 0) TIM_ERROR("error: cannot divide by 0\n");
-                MATH_OP(as_int, %, INT_TYPE);
-                break;
-            case INST_AND:
-				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
-                MATH_OP(as_int, &&, INT_TYPE);
-                break;
-            case INST_OR:
-				if(machine->stack_size < 1) TIM_ERROR("error: stack underflow\n");
-                MATH_OP(as_int, ||, INT_TYPE);
-                break;
-            case INST_ADD_F:
-                MATH_OP(as_float, +, FLOAT_TYPE);
-                break;
-            case INST_SUB_F:
-                MATH_OP(as_float, -, FLOAT_TYPE);
-                break;
-            case INST_MUL_F:
-                MATH_OP(as_float, *, FLOAT_TYPE);
-                break;
-            case INST_DIV_F:
-                if(machine->stack[machine->stack_size - 1].word.as_float == 0.0){
-                    TIM_ERROR("error: cannot divide by 0\n");
-                }
-                MATH_OP(as_float, /, FLOAT_TYPE);
-                break;
-            case INST_MOD_F:
-                if(machine->stack[machine->stack_size - 1].word.as_float == 0.0){
-                    TIM_ERROR("error: cannot divide by 0\n");
-                }
-                b = pop(machine);
-                a = pop(machine);
-                Word c = {.as_float=my_fmod(a.word.as_float, b.word.as_float)};
-                push(machine, c, FLOAT_TYPE);
-                break;
-            case INST_CMPE: {
-                b = machine->stack[machine->stack_size - 1];
-                a = machine->stack[machine->stack_size - 2];
-                machine->stack_size -= 2;
-				switch(a.type) {
-					case PTR_TYPE:
-                    case U64_TYPE:
-                        TYPE_OP(as_u64, U64_TYPE, ==);
-                        break;
-					case CHAR_TYPE:
-                    case U8_TYPE:
-                        TYPE_OP(as_u8, U8_TYPE, ==);
-                        break;
-                    case U16_TYPE:
-                        TYPE_OP(as_u16, U16_TYPE, ==);
-                        break;
-                    case U32_TYPE:
-                        TYPE_OP(as_u32, U32_TYPE, ==);
-                        break;
-					case INT_TYPE:
-                        TYPE_OP(as_int, INT_TYPE, ==);
-						break;
-					case FLOAT_TYPE:
-                        TYPE_OP(as_float, FLOAT_TYPE, ==);
-						break;
-					case DOUBLE_TYPE:
-                        TYPE_OP(as_double, DOUBLE_TYPE, ==);
-						break;
-					default:
-						TIM_ERROR("error: not right...\n");
-				}
-            } break;
-            case INST_CMPNE: {
-                b = machine->stack[machine->stack_size - 1];
-                a = machine->stack[machine->stack_size - 2];
-                machine->stack_size -= 2;
-				switch(a.type) {
-					case PTR_TYPE:
-                    case U64_TYPE:
-                        TYPE_OP(as_u64, U64_TYPE, !=);
-                        break;
-					case CHAR_TYPE:
-                    case U8_TYPE:
-                        TYPE_OP(as_u8, U8_TYPE, !=);
-                        break;
-                    case U16_TYPE:
-                        TYPE_OP(as_u16, U16_TYPE, !=);
-                        break;
-                    case U32_TYPE:
-                        TYPE_OP(as_u32, U32_TYPE, !=);
-                        break;
-					case INT_TYPE:
-                        TYPE_OP(as_int, INT_TYPE, !=);
-						break;
-					case FLOAT_TYPE:
-                        TYPE_OP(as_float, FLOAT_TYPE, !=);
-						break;
-					case DOUBLE_TYPE:
-                        TYPE_OP(as_double, DOUBLE_TYPE, !=);
-						break;
-					default:
-						TIM_ERROR("error: not right...\n");
-				}
-            } break;
-            case INST_CMPG: {
-                b = machine->stack[machine->stack_size - 1];
-                a = machine->stack[machine->stack_size - 2];
-                machine->stack_size -= 2;
-				switch(a.type) {
-					case PTR_TYPE:
-                    case U64_TYPE:
-                        TYPE_OP(as_u64, U64_TYPE, >);
-                        break;
-					case CHAR_TYPE:
-                    case U8_TYPE:
-                        TYPE_OP(as_u8, U8_TYPE, >);
-                        break;
-                    case U16_TYPE:
-                        TYPE_OP(as_u16, U16_TYPE, >);
-                        break;
-                    case U32_TYPE:
-                        TYPE_OP(as_u32, U32_TYPE, >);
-                        break;
-					case INT_TYPE:
-                        TYPE_OP(as_int, INT_TYPE, >);
-						break;
-					case FLOAT_TYPE:
-                        TYPE_OP(as_float, FLOAT_TYPE, >);
-						break;
-					case DOUBLE_TYPE:
-                        TYPE_OP(as_double, DOUBLE_TYPE, >);
-						break;
-					default:
-						TIM_ERROR("error: not right...\n");
-				}
-            } break;
-            case INST_CMPL: {
-                b = machine->stack[machine->stack_size - 1];
-                a = machine->stack[machine->stack_size - 2];
-                machine->stack_size -= 2;
-				switch(a.type) {
-					case PTR_TYPE:
-                    case U64_TYPE:
-                        TYPE_OP(as_u64, U64_TYPE, <);
-                        break;
-					case CHAR_TYPE:
-                    case U8_TYPE:
-                        TYPE_OP(as_u8, U8_TYPE, <);
-                        break;
-                    case U16_TYPE:
-                        TYPE_OP(as_u16, U16_TYPE, <);
-                        break;
-                    case U32_TYPE:
-                        TYPE_OP(as_u32, U32_TYPE, <);
-                        break;
-					case INT_TYPE:
-                        TYPE_OP(as_int, INT_TYPE, <);
-						break;
-					case FLOAT_TYPE:
-                        TYPE_OP(as_float, FLOAT_TYPE, <);
-						break;
-					case DOUBLE_TYPE:
-                        TYPE_OP(as_double, DOUBLE_TYPE, <);
-						break;
-					default:
-						TIM_ERROR("error: not right...\n");
-				}
-            } break;
-            case INST_CMPGE: {
-                b = machine->stack[machine->stack_size - 1];
-                a = machine->stack[machine->stack_size - 2];
-                machine->stack_size -= 2;
-				switch(a.type) {
-					case PTR_TYPE:
-                    case U64_TYPE:
-                        TYPE_OP(as_u64, U64_TYPE, >=);
-                        break;
-					case CHAR_TYPE:
-                    case U8_TYPE:
-                        TYPE_OP(as_u8, U8_TYPE, >=);
-                        break;
-                    case U16_TYPE:
-                        TYPE_OP(as_u16, U16_TYPE, >=);
-                        break;
-                    case U32_TYPE:
-                        TYPE_OP(as_u32, U32_TYPE, >=);
-                        break;
-					case INT_TYPE:
-                        TYPE_OP(as_int, INT_TYPE, >=);
-						break;
-					case FLOAT_TYPE:
-                        TYPE_OP(as_float, FLOAT_TYPE, >=);
-						break;
-					case DOUBLE_TYPE:
-                        TYPE_OP(as_double, DOUBLE_TYPE, >=);
-						break;
-					default:
-						TIM_ERROR("error: not right...\n");
-				}
-            } break;
-            case INST_CMPLE: {
-                b = machine->stack[machine->stack_size - 1];
-                a = machine->stack[machine->stack_size - 2];
-                machine->stack_size -= 2;
-				switch(a.type) {
-					case PTR_TYPE:
-                    case U64_TYPE:
-                        TYPE_OP(as_u64, U64_TYPE, <=);
-                        break;
-					case CHAR_TYPE:
-                    case U8_TYPE:
-                        TYPE_OP(as_u8, U8_TYPE, <=);
-                        break;
-                    case U16_TYPE:
-                        TYPE_OP(as_u16, U16_TYPE, <=);
-                        break;
-                    case U32_TYPE:
-                        TYPE_OP(as_u32, U32_TYPE, <=);
-                        break;
-					case INT_TYPE:
-                        TYPE_OP(as_int, INT_TYPE, <=);
-						break;
-					case FLOAT_TYPE:
-                        TYPE_OP(as_float, FLOAT_TYPE, <=);
-						break;
-					case DOUBLE_TYPE:
-                        TYPE_OP(as_double, DOUBLE_TYPE, <=);
-						break;
-					default:
-						TIM_ERROR("error: not right...\n");
-				}
-            } break;
-            case INST_ITOF:
-                a = pop(machine);
-                a.word.as_float = (double)a.word.as_int; 
-                push(machine, a.word, FLOAT_TYPE);
-                break;
-            case INST_FTOI:
-                a = pop(machine);
-                a.word.as_int = (int64_t)a.word.as_float;
-                push(machine, a.word, INT_TYPE);
-                break;
-            case INST_ITOC:
-                a = pop(machine);
-                a.word.as_char = (char)a.word.as_int;
-                push(machine, a.word, CHAR_TYPE);
-                break;
-            case INST_TOI:
-                machine->stack[machine->stack_size-1].type = INT_TYPE;
-                break;
-            case INST_TOF:
-                machine->stack[machine->stack_size-1].type = FLOAT_TYPE;            
-                break;
-            case INST_TOC:
-                machine->stack[machine->stack_size-1].type = CHAR_TYPE;            
-                break;
-            case INST_TOVP:
-                machine->stack[machine->stack_size-1].type = PTR_TYPE;            
-                break;
-            case INST_CALL:
-                machine->return_stack[machine->return_stack_size++] = ip;
-                ip = machine->instructions.data[ip].value.as_int - 1;
-                break;
-            case INST_RET:
-                ip = machine->return_stack[--machine->return_stack_size];
-                break;
-            case INST_JMP:
-				if(machine->instructions.data[ip].value.as_int == 0) TIM_ERROR("error: cannot jump to 0\n");
-                ip = machine->instructions.data[ip].value.as_int - 1;
-                if(ip + 1 >= machine->program_size){
-                    TIM_ERROR("error: cannot jmp out of bounds to: %ld\n", machine->instructions.data[ip].value.as_int);
-                }
-                break;
-            case INST_ZJMP:
-				if(machine->instructions.data[ip].value.as_int == 0) TIM_ERROR("error: cannot jump to 0\n");					
-                if(pop(machine).word.as_int == 0){
-                    ip = machine->instructions.data[ip].value.as_int - 1;
-                    if(ip + 1 >= machine->program_size){
-	                    TIM_ERROR("error: cannot zjmp out of bounds to: %ld\n", machine->instructions.data[ip].value.as_int);							
-                    }
-                } else {
-                    break;
-                }
-                break;
-            case INST_NZJMP:
-				if(machine->instructions.data[ip].value.as_int == 0) TIM_ERROR("error: cannot jump to 0\n");					
-                if(pop(machine).word.as_int != 0){
-                    ip = machine->instructions.data[ip].value.as_int - 1;
-                    if(ip + 1 >= machine->program_size){
-	                    TIM_ERROR("error: cannot nzjmp out of bounds to: %ld\n", machine->instructions.data[ip].value.as_int);														
-                    }
-                } else {
-                    break;
-                }
-                break;
-            case INST_PRINT:
-                a = pop(machine);
-                printf("as float: %f, as int: %ld, as char: %c, as pointer: %p, type: %s\n",
-                        a.word.as_float, a.word.as_int, a.word.as_char, a.word.as_pointer, str_types[a.type]);
-                break;
-            case INST_SS:
-                push(machine, (Word){.as_int=machine->stack_size}, INT_TYPE);
-                break;
-            case INST_NATIVE: {
-                machine->native_ptrs[machine->instructions.data[ip].value.as_int](machine);
-            } break;
-            case INST_ENTRYPOINT:
-                assert(false);
-                break;
-            case INST_HALT:
-                ip = machine->program_size;
-                break;
-			case INST_LOAD_LIBRARY: {
-				char *lib_name = (char*)pop(machine).word.as_pointer;			
-				char *func_name = (char*)pop(machine).word.as_pointer;		
-				void *lib = dlopen(lib_name, RTLD_LAZY);		
-				if(!lib) {
-					fprintf(stderr, "error loading lib: %s\n", dlerror());
-					exit(1);
-				}
-				native func;
-				*(void**)(&func) = dlsym(lib, func_name);				
-				machine_load_native(machine, func);
-		// WIP FIX THIS
-		/*
-				while(func_name[0] != '\0') {
-					native func;				
-					*(void**)(&func) = dlsym(lib, func_name);							
-					if(!func) {
-						fprintf(stderr, "error loading function: %s\n", dlerror());
-						exit(1);
-					}
-					machine_load_native(machine, func);
-					func_name = (char*)pop(machine).word.as_pointer;						
-				}
-		*/
-			} break;
-            case INST_COUNT:
-                assert(false);
-        }
+        run_instruction(machine, machine->instructions.data[ip], ip);
     }
 	for(size_t i = 2; i < machine->native_ptrs_s; i++) {
 		dlclose(machine->native_ptrs);

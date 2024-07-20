@@ -41,14 +41,17 @@ int main(int argc, char **argv) {
 	char *flag = shift(&argc, &argv);
 	char *filename = NULL;
 	if(flag == NULL) usage(file);
-	bool compile = false;
+    int compile = 0;
 	if(strncmp(flag, "com", 3) == 0) {
-		compile = true;
+		compile = 1;
 		filename = shift(&argc, &argv);
 	} else if(strncmp(flag, "run", 3) == 0) {
-		compile = false;
+		compile = 0;
 		filename = shift(&argc, &argv);		
-	} else if(strncmp(flag, "--help", 6) == 0) {
+	} else if(strncmp(flag, "db", 2) == 0) {
+        compile = 2;
+		filename = shift(&argc, &argv);		
+    } else if(strncmp(flag, "--help", 6) == 0) {
 		usage(file);
 	} else {
 		compile = false;
@@ -73,13 +76,15 @@ int main(int argc, char **argv) {
     generate(&state, &program);
 	
 	state.machine.program_size = state.machine.instructions.count;
-	if(compile) {
+	if(compile == 1) {
 		char *output_file = append_ext(filename, "tim");	
 		printf("Compiling %s...\n", output_file);
 		write_program_to_file(&state.machine, output_file);		
-	} else {
+	} else if(compile == 0) {
 		run_instructions(&state.machine);
-	}
+	} else {
+        machine_debug(&state.machine);
+    }
 	
 	arena_free(&node_arena);
 	arena_free(&string_arena);
