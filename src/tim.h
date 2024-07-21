@@ -298,7 +298,7 @@ void run_instruction(Machine *machine, Inst instruction, size_t ip);
 
 #ifdef TIM_IMPLEMENTATION
 
-char *str_types[] = {"int", "float", "char", "ptr", "reg", "top"};
+char *str_types[] = {"int", "u8", "u16", "u32", "u64", "float", "double", "char", "ptr", "reg", "top"};
 
 char *instructions[INST_COUNT] = {
     "nop",
@@ -894,8 +894,8 @@ void machine_debug(Machine *machine) {
     
                 for(size_t index = 0; (int)index < size; index++) {
                     size_t cur = machine->stack_size - index - 1;
-                    printf("index %zu: ", index);
                     Data element = machine->stack[cur];                
+                    printf("index %zu (%s): ", index, str_types[element.type]);            
         			switch(element.type) {
         				case INT_TYPE: {
         					int64_t value = element.word.as_int;				
@@ -918,6 +918,12 @@ void machine_debug(Machine *machine) {
                     putc('\n', stdout);
                 }
             } break;
+            case 's':
+                printf("ss: %d\n", machine->stack_size);
+                break;
+            case 'q':
+                return;
+                break;
         }
 	}
 }
