@@ -834,7 +834,7 @@ void machine_debug(Machine *machine) {
     bool printed = false;
 	while(i < machine->program_size) {
         if(!printed) {
-    		printf("%s", instructions[machine->instructions.data[i].type]);
+    		fprintf(stdout, "---%s", instructions[machine->instructions.data[i].type]);
     		if(has_operand[machine->instructions.data[i].type]) {
     			putc(' ', stdout);
     			switch(machine->instructions.data[i].data_type) {
@@ -849,10 +849,10 @@ void machine_debug(Machine *machine) {
     						putc('"', stdout);
     						break;
     					}
-    					printf("%ld", value);				
+    					fprintf(stdout, "%ld", value);				
     				} break;
     				case FLOAT_TYPE: {
-    					printf("%f", machine->instructions.data[i].value.as_float);				
+    					fprintf(stdout, "%f", machine->instructions.data[i].value.as_float);				
     				} break;
     				case CHAR_TYPE: {
     					putc('\'', stdout);
@@ -860,16 +860,15 @@ void machine_debug(Machine *machine) {
     					putc('\'', stdout);
     				} break;				
     				case PTR_TYPE: {
-    					printf("%p", machine->instructions.data[i].value.as_pointer);				
+    					fprintf(stdout, "%p", machine->instructions.data[i].value.as_pointer);				
     				} break;
     				default:
     					assert(false && "UNREACHABLE");
     			}
     		}
-    		putc('\n', stdout);    
+    		fprintf(stdout, "\n> ");                
         }
         printed = true;
-        putc('>', stdout);
 
         char command = fgetc(stdin);
         if(command == EOF) {
@@ -915,11 +914,12 @@ void machine_debug(Machine *machine) {
         				default:
         					assert(false && "UNREACHABLE");
         			}
-                    putc('\n', stdout);
+                    fprintf(stdout, "\n");
                 }
+                fprintf(stdout, "> ");
             } break;
             case 's':
-                printf("ss: %d\n", machine->stack_size);
+                fprintf(stdout, "ss: %d\n>", machine->stack_size);
                 break;
             case 'q':
                 return;

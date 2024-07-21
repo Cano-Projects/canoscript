@@ -51,6 +51,9 @@ int main(int argc, char **argv) {
 	} else if(strncmp(flag, "db", 2) == 0) {
         compile = 2;
 		filename = shift(&argc, &argv);		
+    } else if(strncmp(flag, "dis", 3) == 0) {
+        compile = 3;
+		filename = shift(&argc, &argv);		        
     } else if(strncmp(flag, "--help", 6) == 0) {
 		usage(file);
 	} else {
@@ -80,7 +83,9 @@ int main(int argc, char **argv) {
 		char *output_file = append_ext(filename, "tim");	
 		printf("Compiling %s...\n", output_file);
 		write_program_to_file(&state.machine, output_file);		
-	} else if(compile == 0) {
+	} else if(compile == 3) {
+        machine_disasm(&state.machine);        
+    } else if(compile == 0) {
 		run_instructions(&state.machine);
 	} else {
         machine_debug(&state.machine);
