@@ -791,6 +791,10 @@ void handle_char_print(char c) {
 
 void print_operand(Machine *machine, size_t i) {
     switch(machine->instructions.data[i].data_type) {
+        case U8_TYPE:
+        case U16_TYPE:
+        case U32_TYPE:
+        case U64_TYPE:
         case INT_TYPE: {
         	int64_t value = machine->instructions.data[i].value.as_int;				
         	if(machine->instructions.data[i].type == INST_PUSH_STR) {
