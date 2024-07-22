@@ -788,40 +788,44 @@ void handle_char_print(char c) {
 			putc(c, stdout);
 	}
 }
+
+void print_operand(Machine *machine, size_t i) {
+    switch(machine->instructions.data[i].data_type) {
+        case INT_TYPE: {
+        	int64_t value = machine->instructions.data[i].value.as_int;				
+        	if(machine->instructions.data[i].type == INST_PUSH_STR) {
+        		String_View string = machine->str_stack.data[value];
+        		putc('"', stdout);
+        		for(size_t j = 0; j < string.len-1; j++) {
+        			handle_char_print(string.data[j]);
+        		}
+        		putc('"', stdout);
+        		break;
+        	}
+        	fprintf(stdout, "%ld", value);				
+        } break;
+        case FLOAT_TYPE: {
+        	fprintf(stdout, "%f", machine->instructions.data[i].value.as_float);				
+        } break;
+        case CHAR_TYPE: {
+        	putc('\'', stdout);
+        	handle_char_print(machine->instructions.data[i].value.as_char);
+        	putc('\'', stdout);
+        } break;				
+        case PTR_TYPE: {
+        	fprintf(stdout, "%p", machine->instructions.data[i].value.as_pointer);				
+        } break;
+        default:
+        	assert(false && "UNREACHABLE");
+    }
+}
 	
 void machine_disasm(Machine *machine) {
 	for(size_t i = machine->entrypoint; i < machine->program_size; i++) {
 		printf("%s", instructions[machine->instructions.data[i].type]);
 		if(has_operand[machine->instructions.data[i].type]) {
 			putc(' ', stdout);
-			switch(machine->instructions.data[i].data_type) {
-				case INT_TYPE: {
-					int64_t value = machine->instructions.data[i].value.as_int;				
-					if(machine->instructions.data[i].type == INST_PUSH_STR) {
-						String_View string = machine->str_stack.data[value];
-						putc('"', stdout);
-						for(size_t j = 0; j < string.len-1; j++) {
-							handle_char_print(string.data[j]);
-						}
-						putc('"', stdout);
-						break;
-					}
-					printf("%ld", value);				
-				} break;
-				case FLOAT_TYPE: {
-					printf("%f", machine->instructions.data[i].value.as_float);				
-				} break;
-				case CHAR_TYPE: {
-					putc('\'', stdout);
-					handle_char_print(machine->instructions.data[i].value.as_char);
-					putc('\'', stdout);
-				} break;				
-				case PTR_TYPE: {
-					printf("%p", machine->instructions.data[i].value.as_pointer);				
-				} break;
-				default:
-					assert(false && "UNReaCHABLE");
-			}
+            print_operand(machine, i);    
 		}
 		printf("\n");
 	}
@@ -910,34 +914,7 @@ void machine_debug(Machine *machine) {
     		fprintf(stdout, "---%s", instructions[machine->instructions.data[i].type]);
     		if(has_operand[machine->instructions.data[i].type]) {
     			putc(' ', stdout);
-    			switch(machine->instructions.data[i].data_type) {
-    				case INT_TYPE: {
-    					int64_t value = machine->instructions.data[i].value.as_int;				
-    					if(machine->instructions.data[i].type == INST_PUSH_STR) {
-    						String_View string = machine->str_stack.data[value];
-    						putc('"', stdout);
-    						for(size_t j = 0; j < string.len-1; j++) {
-    							handle_char_print(string.data[j]);
-    						}
-    						putc('"', stdout);
-    						break;
-    					}
-    					fprintf(stdout, "%ld", value);				
-    				} break;
-    				case FLOAT_TYPE: {
-    					fprintf(stdout, "%f", machine->instructions.data[i].value.as_float);				
-    				} break;
-    				case CHAR_TYPE: {
-    					putc('\'', stdout);
-    					handle_char_print(machine->instructions.data[i].value.as_char);
-    					putc('\'', stdout);
-    				} break;				
-    				case PTR_TYPE: {
-    					fprintf(stdout, "%p", machine->instructions.data[i].value.as_pointer);				
-    				} break;
-    				default:
-    					assert(false && "UNREACHABLE");
-    			}
+                print_operand(machine, i);
     		}
     		fprintf(stdout, "\n> ");                
         }
