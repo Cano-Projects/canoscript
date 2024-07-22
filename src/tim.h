@@ -846,7 +846,7 @@ int handle_debug_commands(Machine *machine, size_t *i) {
                 TIM_ERROR("could not read stdin");
             }
             int index = atoi(index_str);   
-            while(*i <= (size_t)index) {
+            while(*i < machine->instructions.count && *i <= (size_t)index) {
                 run_instruction(machine, machine->instructions.data[*i], *i);
                 *i += 1;
             }
