@@ -827,11 +827,84 @@ void machine_disasm(Machine *machine) {
 	}
 }
 
+int handle_debug_commands(Machine *machine, size_t *i) {
+    int printed = true;
+    char command = fgetc(stdin);
+    if(command == EOF) {
+        TIM_ERROR("could not read stdin");
+    }
+
+    switch(command) {
+        case 'n':
+            run_instruction(machine, machine->instructions.data[*i], *i);        
+            *i += 1;
+            printed = false;
+            break;
+        case 'b': {
+            char index_str[128] = {0};
+            if(fgets(index_str, 128, stdin) == NULL) {
+                TIM_ERROR("could not read stdin");
+            }
+            int index = atoi(index_str);   
+            while(*i <= (size_t)index) {
+                run_instruction(machine, machine->instructions.data[*i], *i);
+                *i += 1;
+            }
+        } break;
+        case 'p': {
+            char size_str[128] = {0};
+            if(fgets(size_str, 128, stdin) == NULL) {
+                TIM_ERROR("could not read stdin");
+            }
+            int size = atoi(size_str);   
+            if(size > machine->stack_size) {
+                TIM_ERROR("can not print %d elements, the stack only has %d\n", size, machine->stack_size);
+            }
+
+            for(size_t index = 0; (int)index < size; index++) {
+                size_t cur = machine->stack_size - index - 1;
+                Data element = machine->stack[cur];                
+                printf("index %zu (%s): ", index, str_types[element.type]);            
+    			switch(element.type) {
+    				case INT_TYPE: {
+    					int64_t value = element.word.as_int;				
+    					printf("%ld", value);				
+    				} break;
+    				case FLOAT_TYPE: {
+    					printf("%f", element.word.as_float);				
+    				} break;
+    				case CHAR_TYPE: {
+    					putc('\'', stdout);
+    					handle_char_print(element.word.as_char);
+    					putc('\'', stdout);
+    				} break;				
+    				case PTR_TYPE: {
+    					printf("%p", element.word.as_pointer);				
+    				} break;
+    				default:
+    					assert(false && "UNREACHABLE");
+    			}
+                fprintf(stdout, "\n");
+            }
+            fprintf(stdout, "> ");
+        } break;
+        case 's':
+            fprintf(stdout, "ss: %d\n>", machine->stack_size);
+            break;
+        case 'q':
+            printed = -1;
+            break;
+    }
+    return printed;
+}
+
 void machine_debug(Machine *machine) {
 	machine_load_native(machine, native_write);
 	machine_load_native(machine, native_exit);
     size_t i = machine->entrypoint;
-    bool printed = false;
+    fprintf(stdout, "> ");
+    int printed = handle_debug_commands(machine, &i);
+    if(printed == -1) return;
 	while(i < machine->program_size) {
         if(!printed) {
     		fprintf(stdout, "---%s", instructions[machine->instructions.data[i].type]);
@@ -868,63 +941,8 @@ void machine_debug(Machine *machine) {
     		}
     		fprintf(stdout, "\n> ");                
         }
-        printed = true;
-
-        char command = fgetc(stdin);
-        if(command == EOF) {
-            TIM_ERROR("could not read stdin");
-        }
-        
-        switch(command) {
-            case 'n':
-                run_instruction(machine, machine->instructions.data[i], i);        
-                i++;
-                printed = false;
-                break;
-            case 'p': {
-                char size_str[128] = {0};
-                if(fgets(size_str, 128, stdin) == NULL) {
-                    TIM_ERROR("could not read stdin");
-                }
-                int size = atoi(size_str);   
-                if(size > machine->stack_size) {
-                    TIM_ERROR("can not print %d elements, the stack only has %d\n", size, machine->stack_size);
-                }
-    
-                for(size_t index = 0; (int)index < size; index++) {
-                    size_t cur = machine->stack_size - index - 1;
-                    Data element = machine->stack[cur];                
-                    printf("index %zu (%s): ", index, str_types[element.type]);            
-        			switch(element.type) {
-        				case INT_TYPE: {
-        					int64_t value = element.word.as_int;				
-        					printf("%ld", value);				
-        				} break;
-        				case FLOAT_TYPE: {
-        					printf("%f", element.word.as_float);				
-        				} break;
-        				case CHAR_TYPE: {
-        					putc('\'', stdout);
-        					handle_char_print(element.word.as_char);
-        					putc('\'', stdout);
-        				} break;				
-        				case PTR_TYPE: {
-        					printf("%p", element.word.as_pointer);				
-        				} break;
-        				default:
-        					assert(false && "UNREACHABLE");
-        			}
-                    fprintf(stdout, "\n");
-                }
-                fprintf(stdout, "> ");
-            } break;
-            case 's':
-                fprintf(stdout, "ss: %d\n>", machine->stack_size);
-                break;
-            case 'q':
-                return;
-                break;
-        }
+        printed = handle_debug_commands(machine, &i);
+        if(printed == -1) return;
 	}
 }
 
