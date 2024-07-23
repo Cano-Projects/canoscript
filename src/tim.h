@@ -291,7 +291,7 @@ void machine_debug(Machine *machine);
 void machine_free(Machine *machine);
 void machine_load_native(Machine *machine, native ptr);
 void run_instructions(Machine *machine);
-void run_instruction(Machine *machine, Inst instruction, size_t ip);
+size_t run_instruction(Machine *machine, Inst instruction, size_t ip);
 
 
 #endif // TIM_H
@@ -943,7 +943,7 @@ void machine_load_native(Machine *machine, native ptr) {
 	machine->native_ptrs[machine->native_ptrs_s++] = ptr;	
 }
 
-void run_instruction(Machine *machine, Inst instruction, size_t ip) {
+size_t run_instruction(Machine *machine, Inst instruction, size_t ip) {
     Data a, b;
     switch(instruction.type){
         case INST_NOP:
@@ -1541,6 +1541,7 @@ if(machine->instructions.data[ip].value.as_int == 0) TIM_ERROR("error: cannot ju
         case INST_COUNT:
             assert(false);
     }
+    return ip;
 }
 
 
@@ -1548,8 +1549,9 @@ void run_instructions(Machine *machine) {
 	machine_load_native(machine, native_write);
 	machine_load_native(machine, native_exit);
     for(size_t ip = machine->entrypoint; ip < machine->program_size; ip++){
-        run_instruction(machine, machine->instructions.data[ip], ip);
+        ip = run_instruction(machine, machine->instructions.data[ip], ip);
     }
+
 	for(size_t i = 2; i < machine->native_ptrs_s; i++) {
 		dlclose(machine->native_ptrs);
 	}
