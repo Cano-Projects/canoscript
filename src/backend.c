@@ -794,7 +794,6 @@ void gen_program(Program_State *state, Nodes nodes) {
 				reassigning = false;
 	 		   gen_inswap(state, 1);
                 gen_write(state);
-				// TODO: MIGHT NEED a GEN_POP HERE
             } break;
             case TYPE_ARR_INDEX: {
                 int index = get_variable_location(state, node->value.array.name);

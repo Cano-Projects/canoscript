@@ -826,7 +826,7 @@ void print_operand(Machine *machine, size_t i) {
 	
 void machine_disasm(Machine *machine) {
 	for(size_t i = machine->entrypoint; i < machine->program_size; i++) {
-		printf("%s", instructions[machine->instructions.data[i].type]);
+		printf("%zu: %s", i, instructions[machine->instructions.data[i].type]);
 		if(has_operand[machine->instructions.data[i].type]) {
 			putc(' ', stdout);
             print_operand(machine, i);    
