@@ -68,6 +68,12 @@ Inst create_inst(Inst_Set type, Word value, DataType d_type) {
 	};
 }
     
+void gen_print(Program_State *state) {
+	Inst inst = create_inst(INST_PRINT, (Word){.as_int=0}, 0);
+	DA_APPEND(&state->machine.instructions, inst);
+    state->stack_s--;   
+}
+    
 // TODO: add ASSERTs to all "popping" functions
 void gen_push(Program_State *state, int value) {
 	Inst inst = create_inst(INST_PUSH, (Word){.as_int=value}, INT_TYPE);
@@ -576,8 +582,7 @@ void gen_expr(Program_State *state, Expr *expr) {
 			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
 				size += data_type_s[expr->value.structure.values.data[i]->data_type];
 			}
-			if(state->machine.instructions.count > 0 &&
-				state->machine.instructions.data[state->machine.instructions.count-1].type != INST_ALLOC) 
+            if(!reassigning)
 				gen_struct_alloc(state, size);
 			size_t offset = 0;			
 			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
@@ -642,6 +647,8 @@ void gen_expr(Program_State *state, Expr *expr) {
 			}
 			if(!view_cmp(structure.values.data[i].value.var.name, var_name)) 
 				PRINT_ERROR(structure.values.data[0].loc, "error");						
+            gen_dup(state);
+            gen_print(state);
 			gen_push(state, type_to_data[structure.values.data[i].value.var.type]);							
             gen_read(state);            
         } break;
@@ -788,10 +795,13 @@ void gen_program(Program_State *state, Nodes nodes) {
                 String_View structure = node->value.field.structure;
                 String_View var_name = node->value.field.var_name;
                 gen_struct_field_offset(state, structure, var_name);
-	
+                gen_inswap(state, 1);    
+                
 				reassigning = true;
                 gen_expr(state, node->value.field.value.data[0]);
 				reassigning = false;
+                gen_pop(state);
+                break;
 	 		   gen_inswap(state, 1);
                 gen_write(state);
             } break;
