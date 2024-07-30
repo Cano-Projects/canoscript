@@ -835,16 +835,18 @@ void machine_disasm(Machine *machine) {
 	}
 }
 
-int handle_debug_commands(Machine *machine, size_t *i) {
+int handle_debug_commands(Machine *machine, size_t *i, char *old_command) {
     int printed = true;
     char command = fgetc(stdin);
     if(command == EOF) {
         TIM_ERROR("could not read stdin");
     }
+    if(command == '\n') command = *old_command;
+    *old_command = command;
 
     switch(command) {
         case 'n':
-            run_instruction(machine, machine->instructions.data[*i], *i);        
+            *i = run_instruction(machine, machine->instructions.data[*i], *i);        
             *i += 1;
             printed = false;
             break;
@@ -855,7 +857,7 @@ int handle_debug_commands(Machine *machine, size_t *i) {
             }
             int index = atoi(index_str);   
             while(*i < machine->instructions.count && *i <= (size_t)index) {
-                run_instruction(machine, machine->instructions.data[*i], *i);
+                *i = run_instruction(machine, machine->instructions.data[*i], *i);            
                 *i += 1;
             }
         } break;
@@ -910,8 +912,10 @@ void machine_debug(Machine *machine) {
 	machine_load_native(machine, native_write);
 	machine_load_native(machine, native_exit);
     size_t i = machine->entrypoint;
-    fprintf(stdout, "> ");
-    int printed = handle_debug_commands(machine, &i);
+    fprintf(stdout, "%zu: ", i);
+    //fprintf(stdout, "> ");
+    char command = '\n';
+    int printed = handle_debug_commands(machine, &i, &command);
     if(printed == -1) return;
 	while(i < machine->program_size) {
         if(!printed) {
@@ -920,9 +924,9 @@ void machine_debug(Machine *machine) {
     			putc(' ', stdout);
                 print_operand(machine, i);
     		}
-    		fprintf(stdout, "\n> ");                
+    		fprintf(stdout, "\n%zu: ", i);                
         }
-        printed = handle_debug_commands(machine, &i);
+        printed = handle_debug_commands(machine, &i, &command);
         if(printed == -1) return;
 	}
 }
@@ -990,7 +994,7 @@ machine->memory->cell.data[str.len] = '\0';
         case INST_ALLOC: {
             a = pop(machine);
             if(a.type != INT_TYPE) {
-                TIM_ERROR("error: expected int");
+                TIM_ERROR("error: alloc expected int");
             }
 uint64_t val = a.word.as_int;
             insert_memory(machine, val);
@@ -1009,7 +1013,7 @@ uint64_t val = a.word.as_int;
             Data size = pop(machine);                
             Data data = pop(machine);
             if(size.type != INT_TYPE) {
-                TIM_ERROR("error: expected int");                    
+                TIM_ERROR("error: write expected int");                    
             }
             if(size.word.as_int < 0) {
                 TIM_ERROR("error: size cannot be negative");                    
@@ -1028,8 +1032,8 @@ uint64_t index = size.word.as_int;
                 TIM_ERROR("error: expected u8");
             }
             Data size = pop(machine);
-            if(size.type != INT_TYPE) {
-                TIM_ERROR("error: expected int");
+            if(size.type != INT_TYPE && size.type != U8_TYPE) {
+                TIM_ERROR("error: read expected int but found %s", str_types[size.type]);
             }
             if(size.word.as_int < 0) {
                 TIM_ERROR("error: size cannot be negative");                    
@@ -1038,7 +1042,8 @@ uint64_t index = size.word.as_int;
             if(ptr_data.type != PTR_TYPE) {
                 TIM_ERROR("error: expected pointer");
             }
-uint64_t index = size.word.as_int;		
+            uint64_t index = size.word.as_int;		
+            GET_TYPE(size, index);
             void *ptr = ptr_data.word.as_pointer;
             Data data = {0};                
             data.type = type.word.as_int;
