@@ -644,8 +644,10 @@ void gen_expr(Program_State *state, Expr *expr) {
 			for(i = 0; i < structure.values.count; i++) {
 				if(view_cmp(structure.values.data[i].value.var.name, var_name)) break;
 			}
+			
 			if(!view_cmp(structure.values.data[i].value.var.name, var_name)) 
 				PRINT_ERROR(structure.values.data[0].loc, "error");						
+			
 			gen_push(state, type_to_data[structure.values.data[i].value.var.type]);							
             gen_read(state);            
         } break;
@@ -799,14 +801,13 @@ void gen_program(Program_State *state, Nodes nodes) {
             case TYPE_FIELD_REASSIGN: {
                 String_View structure = node->value.field.structure;
                 String_View var_name = node->value.field.var_name;
+
                 gen_struct_field_offset(state, structure, var_name);
                 
                 gen_expr(state, node->value.field.value.data[0]);
 
 	 		   gen_inswap(state, 1);
                 gen_write(state);    
-                gen_dup(state);
-                gen_print(state);
                 break;
             } break;
             case TYPE_ARR_INDEX: {
