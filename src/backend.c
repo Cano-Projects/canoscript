@@ -522,8 +522,8 @@ void gen_field_offset(Program_State *state, Struct structure, String_View var) {
     for(i = 0; !view_cmp(structure.values.data[i].value.var.name, var); i++) {
 		Location loc = {0};
 		loc.filename = "unknown";
-        if(i == structure.values.count) PRINT_ERROR(loc, "unknown field: "View_Print" of struct: "View_Print, View_Arg(var), View_Arg(structure.name));
-        offset += (1 * data_type_s[structure.values.data[i].value.var.type]);
+		if(i == structure.values.count) PRINT_ERROR(loc, "unknown field: "View_Print" of struct: "View_Print, View_Arg(var), View_Arg(structure.name));
+		offset += (1 * data_type_s[structure.values.data[i].value.var.type]);
     }
     gen_offset(state, offset);
     gen_push(state, data_type_s[structure.values.data[i].value.var.type]);
@@ -582,6 +582,7 @@ void gen_expr(Program_State *state, Expr *expr) {
 			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
 				size += data_type_s[expr->value.structure.values.data[i]->data_type];
 			}
+			// TODO: this size can be wrong if not all the fields are declared upfront
             gen_struct_alloc(state, size);
 			size_t offset = 0;			
 			for(size_t i = 0; i < expr->value.structure.values.count; i++) {
