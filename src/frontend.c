@@ -741,7 +741,9 @@ Expr *parse_primary(Parser *parser) {
     if(token.type != TT_INT && token.type != TT_O_CURLY && token.type != TT_BUILTIN && token.type != TT_FLOAT_LIT && token.type != TT_O_PAREN && token.type != TT_STRING && token.type != TT_CHAR_LIT && token.type != TT_IDENT) {
         PRINT_ERROR(token.loc, "expected int, string, char, or ident but found %s", token_types[token.type]);
     }
-    Expr *expr = arena_alloc(arena, sizeof(Expr));   
+    //Expr *expr = arena_alloc(arena, sizeof(Expr));   
+	Expr *expr = malloc(sizeof(Expr));
+	memset(expr, 0, sizeof(Expr));
     switch(token.type) {
         case TT_INT:
             *expr = (Expr){

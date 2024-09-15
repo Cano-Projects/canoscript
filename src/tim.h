@@ -1022,7 +1022,7 @@ uint64_t val = a.word.as_int;
             if(ptr_data.type != PTR_TYPE) {
                 TIM_ERROR("error: expected ptr");                    
             }
-uint64_t index = size.word.as_int;
+			uint64_t index = size.word.as_int;
             void *ptr = ptr_data.word.as_pointer;
             memcpy(ptr, &data.word, index);                
         } break;
