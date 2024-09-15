@@ -1024,7 +1024,6 @@ uint64_t val = a.word.as_int;
             }
 			uint64_t index = size.word.as_int;
             void *ptr = ptr_data.word.as_pointer;
-			printf("ptr %p, data %zu, size %ld\n", ptr, data.word.as_int, index);
             memcpy(ptr, &data.word, index);                
         } break;
         case INST_READ: {
