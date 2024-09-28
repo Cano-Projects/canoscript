@@ -171,26 +171,27 @@ bool is_operator(String_View view) {
         case '+':
         case '-':
         case '*':
-        case '/':
         case '>':
         case '<':
         case '%':
             return true;        
+        case '/':
+			if(view.len > 1 && view.data[1] != '/') return true;
+			break;
         case '=':
             if(view.len > 1 && view.data[1] == '=') return true;        
-            return false;
+			break;
         case '&':
             if(view.len > 1 && view.data[1] == '&') return true;        
-            return false;
+			break;
         case '|':
             if(view.len > 1 && view.data[1] == '|') return true;        
-            return false;
+			break;
         case '!':
             if(view.len > 1 && view.data[1] == '=') return true;        
-            return false;
-        default:
-            return false;
+			break;
     }
+	return false;
 }
     
 Token create_operator_token(char *filename, size_t row, size_t col, String_View *view) {
@@ -440,6 +441,12 @@ Token_Arr lex(Arena *arena, Arena *string_arena, char *entry_filename, String_Vi
                 } else if(is_operator(view)) {
                     token = create_operator_token(filename, row, view.data-start, &view);
                     ADA_APPEND(arena, &tokens, token);                                        
+				} else if(*view.data == '/') {
+					// We already know because of is_operator function that the next character is another forward-slash
+					// So we can assume this in this block
+					while(view.len > 1 && view.data[1] != '\n') {
+						view = view_chop_left(view);
+					}
 				} else if(*view.data == '=') {
                     token.type = TT_EQ;
                     ADA_APPEND(arena, &tokens, token);                                        
