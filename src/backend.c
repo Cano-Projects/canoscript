@@ -867,12 +867,6 @@ void gen_program(Program_State *state, Nodes nodes) {
                 }
 				// + 1 because we need to place it on the top of the stack after scope_end
                 size_t pos = state->ret_stack.data[state->ret_stack.count-1] + 1;
-		/*
-				if(node->value.expr->type == EXPR_STRUCT) {
-					gen_alloc_s(state, 
-								node->value.expr->value.structure.values.count, 1);		
-				}
-		*/
                 gen_expr(state, node->value.expr);
                 ASSERT(pos <= state->stack_s, "pos is too great: pos = %zu and ss = %zu", pos, state->stack_s);
                 gen_inswap(state, state->stack_s-pos);

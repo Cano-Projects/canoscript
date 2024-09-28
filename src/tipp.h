@@ -129,7 +129,9 @@ String_View prepro(char *file_name, int depth){
     }
     String_View buffer = read_file_to_buff(file_name);
 	assert(buffer.data != NULL && "There was an issue with the buffer\n");
+	printf("%zu\n", buffer.len);
     String_View result = pass(buffer, depth, file_name);
+	printf("%zu\n", result.len);
 
     return result;
 }
@@ -232,17 +234,16 @@ String_View pass(String_View view, int depth, char *file_name){
                 for(size_t i = 0; i < strlen(element); i++){
 					DA_APPEND(&output, element[i]);
                 }
-                index = temp_index;
             } else {
                 // if not found in hashmap, set the word value instead of element value
                 for(size_t i = 0; i < word.len; i++){
 					DA_APPEND(&output, word.data[i]);
                 }
-                index = temp_index;
             }
+            index = temp_index;
         } 
 
-		DA_APPEND(&output, *view.data);
+		if(view.len > 0) DA_APPEND(&output, *view.data);
 		view = view_chop_left(view);
     } 
     return view_create(output.data, output.count);
