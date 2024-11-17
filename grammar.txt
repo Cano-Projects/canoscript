@@ -1,0 +1,52 @@
+<program> ::= (<declaration> | <statement>)*
+
+<declaration> ::= <function_declaration> | <variable_declaration>
+
+<function_declaration> ::= <identifier> "(" <parameter_list>? ")" ":" <type> <block>
+<parameter_list> ::= <parameter> ("," <parameter>)*
+<parameter> ::= <identifier> ":" <type>
+<variable_declaration> ::= <identifier> ":" <type> "=" <expression>
+
+<type> ::= "int" | "u8" | "u64" | "str" | <array_type>
+<array_type> ::= <type> "[" <expression>? "]"
+
+<block> ::= "end" | "then" <statement>* "end"
+
+<statement> ::= <variable_declaration>
+              | <assignment>
+              | <if_statement>
+              | <while_loop>
+              | <function_call>
+              | <return_statement>
+              | <builtin_statement>
+
+<assignment> ::= <identifier> "=" <expression>
+<if_statement> ::= "if" <expression> "then" <statement>* "end"
+<while_loop> ::= "while" <expression> "then" <statement>* "end"
+<function_call> ::= <identifier> "(" <argument_list>? ")"
+<argument_list> ::= <expression> ("," <expression>)*
+<return_statement> ::= "return" <expression>
+
+<builtin_statement> ::= "write" <string_literal> | "exit" <expression>
+
+<expression> ::= <literal>
+               | <identifier>
+               | <binary_expression>
+               | <unary_expression>
+               | <array_access>
+               | <function_call>
+
+<binary_expression> ::= <expression> <binary_operator> <expression>
+<binary_operator> ::= "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||"
+<unary_expression> ::= <unary_operator> <expression>
+<unary_operator> ::= "-" | "!" | "~"
+
+<array_access> ::= <identifier> "[" <expression> "]"
+
+<literal> ::= <integer_literal> | <string_literal> | <char_literal> | <array_literal>
+<integer_literal> ::= [0-9]+
+<string_literal> ::= "\"" [^\"]* "\""
+<char_literal> ::= "'" [^'] "'"
+<array_literal> ::= "[" (<literal> ("," <literal>)*)? "]"
+
+<identifier> ::= [a-zA-Z_][a-zA-Z0-9_]*
