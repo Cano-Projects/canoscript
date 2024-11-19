@@ -1,6 +1,4 @@
-<program> ::= (<declaration> | <statement>)*
-
-<declaration> ::= <function_declaration> | <variable_declaration>
+<program> ::= (<function_declaration> | <statement>)*
 
 <function_declaration> ::= <identifier> "(" <parameter_list>? ")" ":" <type> <block>
 <parameter_list> ::= <parameter> ("," <parameter>)*
@@ -10,19 +8,19 @@
 <type> ::= "int" | "u8" | "u64" | "str" | <array_type>
 <array_type> ::= <type> "[" <expression>? "]"
 
-<block> ::= "end" | "then" <statement>* "end"
+<block> ::= "then" <statement>* "end"
 
 <statement> ::= <variable_declaration>
               | <assignment>
+              | <function_call>
               | <if_statement>
               | <while_loop>
-              | <function_call>
               | <return_statement>
               | <builtin_statement>
 
 <assignment> ::= <identifier> "=" <expression>
-<if_statement> ::= "if" <expression> "then" <statement>* "end"
-<while_loop> ::= "while" <expression> "then" <statement>* "end"
+<if_statement> ::= "if" <expression> <block> 
+<while_loop> ::= "while" <expression> <block>
 <function_call> ::= <identifier> "(" <argument_list>? ")"
 <argument_list> ::= <expression> ("," <expression>)*
 <return_statement> ::= "return" <expression>

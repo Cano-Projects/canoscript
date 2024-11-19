@@ -25,11 +25,9 @@ Expr *parse_expr(Parser *parser);
 Expr *parse_primary(Parser *parser);
 Expr *parse_expr_1(Parser *parser, Expr *lhs, Precedence min_precedence);
 Node parse_native_node(Parser *parser, int native_value);
-Node parse_var_dec(Parser *parser);
-Program parse(Arena *arena, Token_Arr tokens, Blocks *block_stack);
+Statement *parse_var_dec(Parser *parser, Token idenfitier);
+Program parse(Arena *arena, Token_Arr tokens);
 Struct get_structure(Location loc, Parser *parser, String_View name);
 bool is_field(Struct *structure, String_View field);
-bool is_in_function(Blocks *blocks);
-String_View get_cur_function(Blocks *blocks);
 
 #endif // FRONTEND_H

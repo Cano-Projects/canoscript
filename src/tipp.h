@@ -129,9 +129,7 @@ String_View prepro(char *file_name, int depth){
     }
     String_View buffer = read_file_to_buff(file_name);
 	assert(buffer.data != NULL && "There was an issue with the buffer\n");
-	printf("%zu\n", buffer.len);
     String_View result = pass(buffer, depth, file_name);
-	printf("%zu\n", result.len);
 
     return result;
 }

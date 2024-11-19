@@ -1,9 +1,9 @@
 #define ARENA_IMPLEMENTATION
 #include "main.h"
 
-#define TIM_IMPLEMENTATION
-#define TIM_H
-#include "tim.h"
+//#define TIM_IMPLEMENTATION
+//#define TIM_H
+//#include "tim.h"
 
 void usage(char *file) {
     fprintf(stderr, "usage: %s <option> <filename.cano>\n", file);
@@ -24,16 +24,6 @@ char *shift(int *argc, char ***argv) {
 		*argc += 1;	
 		*argv += 1;
 		return flag;
-}
-	
-void free_state(Program_State *state) {
-	free(state->vars.data);
-	free(state->labels.data);
-	free(state->functions.data);
-	free(state->scope_stack.data);
-	free(state->block_stack.data);
-	free(state->ret_stack.data);
-	free(state->while_labels.data);
 }
 	
 int main(int argc, char **argv) {
@@ -66,33 +56,8 @@ int main(int argc, char **argv) {
     String_View view = read_file_to_view(&token_arena, filename);
 	Arena string_arena = arena_init(sizeof(char)*ARENA_INIT_SIZE);
     Token_Arr tokens = lex(&token_arena, &string_arena, filename, view);
-    Blocks block_stack = {0};
 	Arena node_arena = arena_init(sizeof(Node)*ARENA_INIT_SIZE);
-    Program program = parse(&node_arena, tokens, &block_stack);
+    Program program = parse(&node_arena, tokens);
 	
 	arena_free(&token_arena);	
-	
-    Program_State state = {0};
-	state.program = program;
-    state.structs = program.structs;
-	state.symbols = program.symbols;
-    generate(&state, &program);
-	
-	state.machine.program_size = state.machine.instructions.count;
-	if(compile == 1) {
-		char *output_file = append_ext(filename, "tim");	
-		printf("Compiling %s...\n", output_file);
-		write_program_to_file(&state.machine, output_file);		
-	} else if(compile == 3) {
-        machine_disasm(&state.machine);        
-    } else if(compile == 0) {
-		run_instructions(&state.machine);
-	} else {
-        machine_debug(&state.machine);
-    }
-	
-	arena_free(&node_arena);
-	arena_free(&string_arena);
-	free_state(&state);
-	machine_free(&state.machine);
 }

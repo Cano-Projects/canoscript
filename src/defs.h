@@ -181,11 +181,6 @@ typedef struct {
 	// optional
 	Ext_Funcs ext_funcs;	
 } Builtin;
-
-typedef struct {
-    String_View name;
-    Exprs args;    
-} Func_Call;
     
 typedef struct {
     String_View name;
@@ -241,7 +236,6 @@ typedef union {
     Array array;
     String_View variable;
     String_View string;
-    Func_Call func_call;
 	Ext_Func_Call ext;
     Builtin builtin;
 } Expr_Value;
@@ -258,33 +252,6 @@ typedef enum {
     VAR_STRING,
     VAR_INT,
 } Var_Type;
-
-typedef struct {
-    String_View string;
-    Expr *expr;
-} Arg_Value;
-    
-typedef enum {
-    ARG_STRING,
-    ARG_EXPR,
-} Arg_Type;
-
-typedef struct {
-    Arg_Type type;
-    Arg_Value value; 
-    String_View name;
-} Arg;
-    
-typedef struct {
-    Arg *data;
-    size_t count;
-    size_t capacity;
-} Args;
-
-typedef struct {
-    Args args;
-    int type;
-} Native_Call;
 
 typedef struct {
     String_View name;
@@ -321,7 +288,6 @@ typedef struct {
     String_View name;
     String_View struct_name;
 	String_View function;	
-    Args struct_value;
     Type_Type type;
     Exprs value;
     size_t stack_pos;
@@ -368,7 +334,6 @@ typedef struct {
 } Label;
 
 typedef union {
-    Native_Call native;
     Expr *expr;
     Expr *conditional;
     Expr *expr_stmt;
@@ -377,7 +342,6 @@ typedef union {
     Label label;
     Else_Label el;
     Func_Dec func_dec;
-    Func_Call func_call;
     Struct structs;
     Field field;
 } Node_Value;
@@ -406,17 +370,6 @@ typedef struct {
     size_t count;
     size_t capacity;
 } Size_Stack;
-
-typedef struct {
-    String_View value;
-    Block_Type type;
-} Block;
-
-typedef struct {
-    Block *data;
-    size_t count;
-    size_t capacity;
-} Blocks;
 
 typedef union {
 	Function function;
@@ -524,13 +477,57 @@ typedef struct {
 typedef struct {
 	Arena *arena;
 	Token_Arr *tokens;
-	Blocks *blocks;
 	Nodes *variables;
 	Nodes ext_nodes;
 	Functions *functions;
 	Nodes *structs;
 	Symbols symbols;
 } Parser;
+
+typedef enum {
+    STMT_VAR_DEC,
+    STMT_REASSIGN,
+    STMT_IF,
+    STMT_WHILE,
+    STMT_FUNC_CALL,
+    STMT_BUILTIN,
+} Statement_Type;
+
+struct Statement;
+
+typedef struct {
+    struct Statement *data;
+    size_t count;
+    size_t capacity;
+} Block;
+
+typedef struct {
+    String_View name;
+    Type_Type type;
+} Var;
+
+typedef struct {
+    Expr **data;
+    size_t count;
+    size_t capacity;
+} Arg_List;
+
+typedef struct {
+    Arg_List args;  
+    String_View name;
+} Func_Call;
+
+typedef union {
+    Var var;
+    Block *block;
+    Func_Call call;
+} Statement_Val;
+
+typedef struct {
+    Statement_Type type; 
+    Statement_Val val; 
+    Expr *expr;
+} Statement;
 
 void *custom_realloc(void *ptr, size_t size);
     
